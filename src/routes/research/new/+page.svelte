@@ -5,7 +5,7 @@
   import Card from '$lib/components/ui/Card.svelte';
   import Input from '$lib/components/ui/Input.svelte';
   import { api } from '$lib/api';
-  import type { AssetType } from '$lib/types';
+  import type { AssetType, ResearchMode } from '$lib/types';
 
   let keyword = '';
   let category = 'general';
@@ -13,6 +13,7 @@
   let locale = 'en-US';
   let maxSuggestions = 5;
   let assetsPerQuery = 30;
+  let mode: ResearchMode = 'fast';
   let submitting = false;
   let error = '';
 
@@ -20,7 +21,7 @@
     if (!keyword.trim()) { error = 'Seed keyword wajib diisi.'; return; }
     submitting = true; error = '';
     try {
-      const run = await api.createRun({ keyword: keyword.trim(), category, assetType, locale, maxSuggestions, assetsPerQuery });
+      const run = await api.createRun({ keyword: keyword.trim(), category, assetType, locale, maxSuggestions, assetsPerQuery, mode });
       await goto(`/research/${run.id}`);
     } catch (err) { error = err instanceof Error ? err.message : 'Research gagal dibuat'; }
     finally { submitting = false; }
@@ -47,6 +48,8 @@
       <div class="space-y-2"><label for="assets" class="text-sm font-medium">Assets per query</label><Input id="assets" type="number" bind:value={assetsPerQuery} /><p class="text-xs text-slate-600">1–100 aset untuk setiap kombinasi suggestion dan sort mode.</p></div>
 
       <div class="flex gap-3 rounded-md border border-cyan-400/15 bg-cyan-400/5 p-3 text-xs leading-5 text-slate-400"><Info size={16} class="mt-0.5 shrink-0 text-cyan-400" /><span>Adobe Stock tidak menampilkan angka download individual. Sistem menyimpan <span class="font-mono text-cyan-300">download_rank</span> sebagai proxy popularitas.</span></div>
+      <div class="space-y-2"><p class="text-sm font-medium">Research mode</p><div class="grid gap-2 sm:grid-cols-2"><button type="button" class={`rounded-md border p-3 text-left transition-colors ${mode === 'fast' ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => mode = 'fast'}><span class="block text-sm font-medium">Fast</span><span class="mt-1 block text-[11px] opacity-70">Downloads only, autocomplete terbatas, keyword detail 1 asset/query.</span></button><button type="button" class={`rounded-md border p-3 text-left transition-colors ${mode === 'full' ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => mode = 'full'}><span class="block text-sm font-medium">Full</span><span class="mt-1 block text-[11px] opacity-70">Downloads, relevance, recent, dan keyword detail semua asset downloads.</span></button></div></div>
+
       {#if error}<div class="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>{/if}
       <div class="flex justify-end gap-2 border-t border-slate-800 pt-5"><a href="/"><Button variant="ghost" type="button">Cancel</Button></a><Button type="submit" disabled={submitting || !keyword.trim()}><Play size={15} />{submitting ? 'Creating…' : 'Start research'}</Button></div>
     </form>

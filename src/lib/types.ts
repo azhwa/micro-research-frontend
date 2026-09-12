@@ -1,4 +1,5 @@
 export type AssetType = 'images' | 'videos';
+export type ResearchMode = 'fast' | 'full';
 export type RunStatus = 'pending' | 'running' | 'completed' | 'partial' | 'failed' | 'cancelled';
 export type SortMode = 'downloads' | 'relevance' | 'recent';
 
@@ -10,6 +11,7 @@ export interface ResearchRun {
   locale: string;
   maxSuggestions: number;
   assetsPerQuery: number;
+  mode: ResearchMode;
   status: RunStatus;
   progressTotal: number;
   progressCompleted: number;
