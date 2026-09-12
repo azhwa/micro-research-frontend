@@ -66,9 +66,16 @@
     await loadKeys();
     try {
       isAdmin = (await api.getAuthMe()).isAdmin;
-      if (isAdmin) await loadProxies();
-    } catch {
-      isAdmin = false;
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Status admin tidak dapat dimuat';
+      return;
+    }
+    if (isAdmin) {
+      try {
+        await loadProxies();
+      } catch (err) {
+        error = err instanceof Error ? err.message : 'Proxy list tidak dapat dimuat';
+      }
     }
   }
 
