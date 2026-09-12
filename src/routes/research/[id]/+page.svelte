@@ -36,6 +36,22 @@
   $: latestAi = aiRecommendations.find((item) => item.status === 'completed') ?? aiRecommendations[0] ?? null;
   $: aiPayload = latestAi?.response && typeof latestAi.response === 'object' && !Array.isArray(latestAi.response) ? latestAi.response as { summary?: string; overallAssessment?: string; recommendations?: Array<{ assetConcept?: string; format?: string; titleIdeas?: string[]; keywordCluster?: string[]; rationale?: string; demandSignal?: string; competitionSignal?: string; confidence?: string }>; cautions?: string[] } : null;
 
+  function eventDetail(event: ResearchEvent): string {
+    if (!event.metadataJson) return '';
+    try {
+      const metadata = JSON.parse(event.metadataJson) as Record<string, unknown>;
+      const parts = [
+        typeof metadata.failureType === 'string' ? `cause: ${metadata.failureType}` : '',
+        typeof metadata.errorName === 'string' ? metadata.errorName : '',
+        typeof metadata.pageUrl === 'string' ? metadata.pageUrl : '',
+        typeof metadata.bodyPreview === 'string' && metadata.bodyPreview ? `page: ${metadata.bodyPreview}` : ''
+      ].filter(Boolean);
+      return parts.join(' · ');
+    } catch {
+      return '';
+    }
+  }
+
   async function loadData(withChildren = true) {
     if (refreshing) return;
     refreshing = true;
@@ -142,7 +158,7 @@
     {:else}
     <Card>
       <div class="flex items-center justify-between border-b border-slate-800 px-4 py-3"><div class="flex items-center gap-2"><Activity size={15} class="text-cyan-400" /><div><h2 class="text-sm font-medium">Live activity</h2><p class="mt-0.5 text-xs text-slate-500">Event worker terakhir · refresh setiap 3 detik</p></div></div>{#if !isTerminal}<span class="flex items-center gap-1.5 text-[11px] text-emerald-400"><span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>Live</span>{/if}</div>
-      {#if !events.length}<div class="px-4 py-5 text-xs text-slate-600">Belum ada event. Event akan muncul saat worker memulai proses.</div>{:else}<div class="max-h-64 divide-y divide-slate-800/60 overflow-y-auto">{#each events as event}<div class="flex gap-3 px-4 py-2.5 text-xs"><span class={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${event.level === 'success' ? 'bg-emerald-400' : event.level === 'warning' ? 'bg-amber-400' : event.level === 'error' ? 'bg-red-400' : 'bg-cyan-400'}`}></span><div class="min-w-0 flex-1"><p class={`${event.level === 'error' ? 'text-red-300' : 'text-slate-300'}`}>{event.message}</p><p class="mt-0.5 font-mono text-[10px] text-slate-600">{formatDate(event.createdAt)} · {event.eventType}</p></div></div>{/each}</div>{/if}
+      {#if !events.length}<div class="px-4 py-5 text-xs text-slate-600">Belum ada event. Event akan muncul saat worker memulai proses.</div>{:else}<div class="max-h-64 divide-y divide-slate-800/60 overflow-y-auto">{#each events as event}<div class="flex gap-3 px-4 py-2.5 text-xs"><span class={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${event.level === 'success' ? 'bg-emerald-400' : event.level === 'warning' ? 'bg-amber-400' : event.level === 'error' ? 'bg-red-400' : 'bg-cyan-400'}`}></span><div class="min-w-0 flex-1"><p class={`${event.level === 'error' ? 'text-red-300' : 'text-slate-300'}`}>{event.message}</p>{#if eventDetail(event)}<p class="mt-1 break-words font-mono text-[10px] text-slate-500">{eventDetail(event)}</p>{/if}<p class="mt-0.5 font-mono text-[10px] text-slate-600">{formatDate(event.createdAt)} · {event.eventType}</p></div></div>{/each}</div>{/if}
     </Card>
 
     <Card>
