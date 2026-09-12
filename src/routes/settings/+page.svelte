@@ -63,6 +63,22 @@
     proxies = await api.listProxies();
   }
 
+  async function removeAllProxies() {
+    if (!proxies.length) return;
+    if (!confirm('Hapus SEMUA proxy? Tindakan ini tidak dapat dibatalkan.')) return;
+    if (!confirm('Konfirmasi lagi: seluruh daftar proxy akan dihapus permanen.')) return;
+    proxyValidating = true; error = ''; notice = '';
+    try {
+      const result = await api.deleteAllProxies();
+      proxies = [];
+      notice = result.deleted + ' proxy dihapus.';
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Semua proxy tidak dapat dihapus';
+    } finally {
+      proxyValidating = false;
+    }
+  }
+
   async function loadSettings() {
     await loadKeys();
     try {
@@ -173,7 +189,7 @@
     </Card>
     <Card>
       <div class="border-b border-slate-800 px-5 py-4"><h2 class="text-sm font-medium">Configured proxies</h2><p class="mt-1 text-xs text-slate-500">Proxy aktif akan digunakan untuk research berikutnya.</p></div>
-      <div class="flex justify-end border-b border-slate-800/70 px-5 py-3"><Button variant="outline" size="sm" on:click={validateProxies} disabled={proxyValidating || !proxies.length}>{proxyValidating ? 'Validating...' : 'Validate & remove invalid'}</Button></div>
+      <div class="flex justify-end gap-2 border-b border-slate-800/70 px-5 py-3"><Button variant="outline" size="sm" on:click={validateProxies} disabled={proxyValidating || !proxies.length}>{proxyValidating ? 'Validating...' : 'Validate & remove invalid'}</Button><Button variant="ghost" size="sm" on:click={removeAllProxies} disabled={proxyValidating || !proxies.length}>Delete all</Button></div>
       {#if !proxies.length}
         <div class="px-5 py-10 text-center text-sm text-slate-500">Belum ada proxy.</div>
       {:else}
