@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import type { AiRecommendation, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, ResearchComparison, ResearchEvent, ResearchKeyword, ResearchResult, ResearchRun, ResearchSummary, RunCreated } from './types';
+import type { AiRecommendation, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, ProxyEndpoint, ResearchComparison, ResearchEvent, ResearchKeyword, ResearchResult, ResearchRun, ResearchSummary, RunCreated } from './types';
 import { getClerkToken } from './clerk';
 
 const API_BASE = (env.PUBLIC_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -57,7 +57,12 @@ export const api = {
   createGeminiKey: (body: { label: string; apiKey: string }) => request<GeminiApiKey>('/api/gemini/keys', { method: 'POST', body: JSON.stringify(body) }),
   testGeminiKey: (id: string) => request<{ ok: boolean; response: string }>(`/api/gemini/keys/${id}/test`, { method: 'POST', body: JSON.stringify({}) }),
   setGeminiKeyStatus: (id: string, status: 'active' | 'disabled') => request<GeminiApiKey>(`/api/gemini/keys/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
-  deleteGeminiKey: (id: string) => request<{ deleted: boolean }>(`/api/gemini/keys/${id}`, { method: 'DELETE' }),
+ deleteGeminiKey: (id: string) => request<{ deleted: boolean }>(`/api/gemini/keys/${id}`, { method: 'DELETE' }),
+  listProxies: () => request<ProxyEndpoint[]>('/api/proxies'),
+  createProxy: (body: { label: string; proxyUrl: string }) => request<ProxyEndpoint>('/api/proxies', { method: 'POST', body: JSON.stringify(body) }),
+  testProxy: (id: string) => request<{ proxy: ProxyEndpoint; ok: boolean; statusCode: number | null; pageTitle: string; message: string }>(`/api/proxies/${id}/test`, { method: 'POST', body: JSON.stringify({}) }),
+  setProxyStatus: (id: string, status: 'active' | 'disabled') => request<ProxyEndpoint>(`/api/proxies/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  deleteProxy: (id: string) => request<{ deleted: boolean }>(`/api/proxies/${id}`, { method: 'DELETE' }),
   generateAiRecommendation: (id: string, model = 'gemini-3.5-flash-lite') => request<{ recommendation: AiRecommendation; context: Record<string, unknown> }>(`/api/research-runs/${id}/ai-recommendations/generate`, { method: 'POST', body: JSON.stringify({ model }) }),
   generateGlobalAiRecommendation: (options: { model?: string; assetType?: string; locale?: string; category?: string } = {}) => request<{ recommendation: AiRecommendation; context: Record<string, unknown> }>('/api/ai-recommendations/global/generate', { method: 'POST', body: JSON.stringify(options) }),
   getGlobalAiRecommendations: (limit = 20) => request<AiRecommendation[]>(`/api/ai-recommendations/global?limit=${limit}`),

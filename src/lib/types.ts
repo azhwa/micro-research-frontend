@@ -220,3 +220,17 @@ export interface GeminiApiKey {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ProxyEndpoint {
+  id: string;
+  label: string;
+  displayUrl: string;
+  status: string;
+  failureCount: number;
+  lastTestAt: string | null;
+  lastTestOk: boolean | null;
+  lastUsedAt: string | null;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
