@@ -7,7 +7,9 @@ const API_BASE = (env.PUBLIC_API_BASE_URL || 'http://localhost:3000').replace(/\
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = await getClerkToken();
   const headers = new Headers(init?.headers);
-  headers.set('content-type', 'application/json');
+  if (init?.body !== undefined && init.body !== null) {
+    headers.set('content-type', 'application/json');
+  }
   if (token) headers.set('authorization', `Bearer ${token}`);
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
