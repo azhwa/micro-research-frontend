@@ -1,0 +1,66 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { Check, KeyRound, LoaderCircle, Plus, RefreshCw, Trash2, X } from '@lucide/svelte';
+  import Button from '$lib/components/ui/Button.svelte';
+  import Card from '$lib/components/ui/Card.svelte';
+  import Input from '$lib/components/ui/Input.svelte';
+  import Badge from '$lib/components/ui/Badge.svelte';
+  import { api } from '$lib/api';
+  import type { GeminiApiKey } from '$lib/types';
+
+  let keys: GeminiApiKey[] = [];
+  let label = 'Personal Gemini key';
+  let apiKey = '';
+  let loading = true;
+  let saving = false;
+  let error = '';
+  let notice = '';
+  let testingId = '';
+
+  async function loadKeys() {
+    loading = true; error = '';
+    try { keys = await api.listGeminiKeys(); }
+    catch (err) { error = err instanceof Error ? err.message : 'Gemini keys tidak dapat dimuat'; }
+    finally { loading = false; }
+  }
+
+  async function addKey() {
+    if (!apiKey.trim()) { error = 'API key wajib diisi'; return; }
+    saving = true; error = ''; notice = '';
+    try { await api.createGeminiKey({ label, apiKey }); apiKey = ''; notice = 'Gemini API key tersimpan dengan aman.'; await loadKeys(); }
+    catch (err) { error = err instanceof Error ? err.message : 'API key tidak dapat disimpan'; }
+    finally { saving = false; }
+  }
+
+  async function testKey(id: string) {
+    testingId = id; error = ''; notice = '';
+    try { await api.testGeminiKey(id); notice = 'API key berhasil diuji.'; await loadKeys(); }
+    catch (err) { error = err instanceof Error ? err.message : 'API key test gagal'; await loadKeys(); }
+    finally { testingId = ''; }
+  }
+
+  async function toggleKey(item: GeminiApiKey) {
+    error = ''; notice = '';
+    try { await api.setGeminiKeyStatus(item.id, item.status === 'active' ? 'disabled' : 'active'); await loadKeys(); }
+    catch (err) { error = err instanceof Error ? err.message : 'Status key tidak dapat diubah'; }
+  }
+
+  async function removeKey(item: GeminiApiKey) {
+    if (!confirm(`Hapus ${item.label}? API key tidak dapat dipulihkan.`)) return;
+    error = ''; notice = '';
+    try { await api.deleteGeminiKey(item.id); notice = 'API key dihapus.'; await loadKeys(); }
+    catch (err) { error = err instanceof Error ? err.message : 'API key tidak dapat dihapus'; }
+  }
+
+  onMount(loadKeys);
+</script>
+
+<svelte:head><title>Gemini settings — StockScope</title></svelte:head>
+
+<div class="mx-auto max-w-4xl space-y-6">
+  <div class="flex items-end justify-between gap-4"><div><p class="mb-2 text-xs font-medium uppercase tracking-widest text-cyan-400">Personal AI</p><h1 class="text-2xl font-semibold tracking-tight">Gemini API keys</h1><p class="mt-1 text-sm text-slate-500">Gunakan quota Gemini milik Anda untuk membuat rekomendasi research.</p></div><Button variant="outline" size="sm" on:click={loadKeys} disabled={loading}><RefreshCw size={14} class={loading ? 'animate-spin' : ''} /> Refresh</Button></div>
+  {#if error}<div class="flex items-center gap-2 rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300"><X size={15} />{error}</div>{/if}
+  {#if notice}<div class="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-300"><Check size={15} />{notice}</div>{/if}
+  <Card className="p-5"><div class="flex items-center gap-2"><KeyRound size={16} class="text-cyan-300" /><h2 class="text-sm font-medium">Add API key</h2></div><p class="mt-2 text-xs leading-5 text-slate-500">Key dienkripsi di backend dan tidak pernah dikembalikan ke browser atau ditulis ke log.</p><form class="mt-5 grid gap-3 sm:grid-cols-[1fr_2fr_auto] sm:items-end" on:submit|preventDefault={addKey}><label class="space-y-1.5 text-xs text-slate-400"><span>Label</span><Input bind:value={label} placeholder="Personal key" /></label><label class="space-y-1.5 text-xs text-slate-400"><span>Gemini API key</span><Input bind:value={apiKey} type="password" placeholder="Paste your Gemini API key" /></label><Button type="submit" disabled={saving}><Plus size={15} />{saving ? 'Saving…' : 'Add key'}</Button></form></Card>
+  <Card><div class="border-b border-slate-800 px-5 py-4"><h2 class="text-sm font-medium">Your keys</h2><p class="mt-1 text-xs text-slate-500">Hanya key milik akun Anda yang ditampilkan.</p></div>{#if loading}<div class="flex items-center justify-center gap-2 px-5 py-12 text-sm text-slate-500"><LoaderCircle size={16} class="animate-spin" /> Loading keys…</div>{:else if !keys.length}<div class="px-5 py-12 text-center text-sm text-slate-500">Belum ada Gemini API key.</div>{:else}<div class="divide-y divide-slate-800/70">{#each keys as item}<div class="flex flex-wrap items-center gap-3 px-5 py-4"><div class="flex h-8 w-8 items-center justify-center rounded-md bg-slate-800 text-cyan-300"><KeyRound size={15} /></div><div class="min-w-0 flex-1"><p class="truncate text-sm font-medium text-slate-200">{item.label}</p><p class="mt-1 font-mono text-[11px] text-slate-500">••••{item.keyHint}</p></div><Badge tone={item.status === 'active' ? 'success' : 'muted'}>{item.status}</Badge>{#if item.failureCount}<span class="text-[11px] text-amber-300">{item.failureCount} failures</span>{/if}<div class="flex gap-2"><Button variant="outline" size="sm" on:click={() => testKey(item.id)} disabled={testingId === item.id}>{testingId === item.id ? 'Testing…' : 'Test'}</Button><Button variant="ghost" size="sm" on:click={() => toggleKey(item)}>{item.status === 'active' ? 'Disable' : 'Enable'}</Button><Button variant="ghost" size="icon" ariaLabel="Delete key" on:click={() => removeKey(item)}><Trash2 size={15} class="text-red-300" /></Button></div></div>{/each}</div>{/if}</Card>
+</div>
