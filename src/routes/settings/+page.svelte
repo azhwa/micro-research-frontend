@@ -22,6 +22,7 @@
   let proxyUrl = '';
   let proxySaving = false;
   let proxyTestingId = '';
+  let proxyValidating = false;
 
   async function loadKeys() {
     loading = true; error = '';
@@ -115,6 +116,20 @@
     }
   }
 
+  async function validateProxies() {
+    if (!confirm('Test semua proxy aktif dan hapus yang gagal?')) return;
+    proxyValidating = true; error = ''; notice = '';
+    try {
+      const result = await api.validateProxies();
+      notice = result.checked + ' proxy diuji: ' + result.validCount + ' valid, ' + result.removedCount + ' dihapus.';
+      await loadProxies();
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Validasi proxy gagal';
+    } finally {
+      proxyValidating = false;
+    }
+  }
+
   async function toggleProxy(item: ProxyEndpoint) {
     error = ''; notice = '';
     try {
@@ -161,6 +176,7 @@
     </Card>
     <Card>
       <div class="border-b border-slate-800 px-5 py-4"><h2 class="text-sm font-medium">Configured proxies</h2><p class="mt-1 text-xs text-slate-500">Proxy aktif akan digunakan untuk research berikutnya.</p></div>
+      <div class="flex justify-end border-b border-slate-800/70 px-5 py-3"><Button variant="outline" size="sm" on:click={validateProxies} disabled={proxyValidating || !proxies.length}>{proxyValidating ? 'Validating...' : 'Validate & remove invalid'}</Button></div>
       {#if !proxies.length}
         <div class="px-5 py-10 text-center text-sm text-slate-500">Belum ada proxy.</div>
       {:else}
