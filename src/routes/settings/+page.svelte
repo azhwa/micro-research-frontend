@@ -84,16 +84,13 @@
     if (!proxyUrl.trim()) { error = 'Proxy URL wajib diisi'; return; }
     proxySaving = true; error = ''; notice = '';
     try {
-      const values = proxyUrl.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
-      for (const [index, value] of values.entries()) {
-        await api.createProxy({
-          label: values.length > 1 ? proxyLabel + ' ' + (index + 1) : proxyLabel,
-          proxyUrl: value
-        });
-      }
+      const result = await api.createProxyBatch({ label: proxyLabel, proxyUrl });
       proxyUrl = '';
-      notice = values.length + ' proxy tersimpan. Jalankan test sebelum dipakai research.';
-      await loadProxies();
+      proxies = [...proxies, ...result.created];
+      notice = result.created.length + ' proxy tersimpan.' + (result.rejected.length ? ' ' + result.rejected.length + ' baris ditolak.' : '');
+      if (result.rejected.length) {
+        error = result.rejected.map((item) => item.value + ': ' + item.reason).join(' | ');
+      }
     } catch (err) {
       error = err instanceof Error ? err.message : 'Proxy tidak dapat disimpan';
     } finally {

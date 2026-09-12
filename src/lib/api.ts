@@ -61,6 +61,7 @@ export const api = {
  listProxies: () => request<ProxyEndpoint[]>('/api/proxies'),
   validateProxies: () => request<{ checked: number; validCount: number; removedCount: number; removed: Array<{ id: string; label: string; reason: string }> }>('/api/proxies/validate-all', { method: 'POST', body: JSON.stringify({}) }),
  createProxy: (body: { label: string; proxyUrl: string }) => request<ProxyEndpoint>('/api/proxies', { method: 'POST', body: JSON.stringify(body) }),
+  createProxyBatch: (body: { label: string; proxyUrl: string }) => request<{ created: ProxyEndpoint[]; rejected: Array<{ value: string; reason: string }>; total: number }>('/api/proxies/batch', { method: 'POST', body: JSON.stringify(body) }),
   testProxy: (id: string) => request<{ proxy: ProxyEndpoint; ok: boolean; statusCode: number | null; pageTitle: string; message: string }>(`/api/proxies/${id}/test`, { method: 'POST', body: JSON.stringify({}) }),
   setProxyStatus: (id: string, status: 'active' | 'disabled') => request<ProxyEndpoint>(`/api/proxies/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   deleteProxy: (id: string) => request<{ deleted: boolean }>(`/api/proxies/${id}`, { method: 'DELETE' }),
