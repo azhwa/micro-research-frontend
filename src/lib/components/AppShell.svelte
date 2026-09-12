@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Activity, BarChart3, Compass, Database, FlaskConical, GitCompare, KeyRound, Layers3, Search } from '@lucide/svelte';
+  import { Activity, BarChart3, Compass, Database, FlaskConical, GitCompare, KeyRound, Layers3, Search, Settings } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -65,7 +65,7 @@
         <a href="/compare" class={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm', page.url.pathname.startsWith('/compare') ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200')}><GitCompare size={16} /> Compare runs</a>
         {#if isAdmin}<a href="/monitoring" class={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm', page.url.pathname.startsWith('/monitoring') ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200')}><Activity size={16} /> Monitoring</a>{/if}
         <a href="/research/new" class={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm', page.url.pathname.startsWith('/research/new') ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200')}><FlaskConical size={16} /> New research</a>
-        <a href="/settings" class={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm', page.url.pathname.startsWith('/settings') ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200')}><KeyRound size={16} /> Gemini keys</a>
+        <a href="/settings" class={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm', page.url.pathname.startsWith('/settings') ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200')}><Settings size={16} /> Settings</a>
       </nav>
       <p class="mb-2 mt-8 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-600">Sources</p>
       <div class="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-slate-500"><Search size={16} /> Adobe Stock <span class="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400"></span></div>
