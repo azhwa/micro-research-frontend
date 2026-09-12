@@ -54,6 +54,12 @@
       <div class="flex items-center gap-3 text-xs text-slate-500"><span class={`h-1.5 w-1.5 rounded-full ${backendStatus === 'online' ? 'bg-emerald-400' : backendStatus === 'offline' ? 'bg-red-400' : 'bg-amber-400'}`}></span>{backendStatus === 'online' ? 'Backend online' : backendStatus === 'offline' ? 'Backend offline' : 'Checking backend'}<div bind:this={userButtonNode} class="min-h-7 min-w-7"></div></div>
     </div>
   </header>
+  <nav class="flex gap-2 overflow-x-auto border-b border-slate-800/70 px-4 py-2 lg:hidden">
+    <a href="/" class="whitespace-nowrap rounded-md px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-900">Overview</a>
+    <a href="/discover" class="whitespace-nowrap rounded-md px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-900">Discover</a>
+    <a href="/research/new" class="whitespace-nowrap rounded-md px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-900">New research</a>
+    <a href="/settings" class="whitespace-nowrap rounded-md bg-slate-800 px-3 py-1.5 text-xs text-slate-100"><Settings size={13} class="mr-1 inline" />Settings</a>
+  </nav>
 
   <div class="mx-auto flex max-w-[1440px]">
     <aside class="hidden w-56 shrink-0 border-r border-slate-800/70 px-3 py-5 lg:block">
