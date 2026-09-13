@@ -10,7 +10,7 @@
   let keyword = '';
   let category = 'general';
   let assetType: AssetType = 'images';
-  let locale = 'en-US';
+  let locale = 'en-GB';
   let maxSuggestions = 5;
   let assetsPerQuery = 30;
   let mode: ResearchMode = 'fast';

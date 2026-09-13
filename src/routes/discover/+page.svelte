@@ -11,7 +11,7 @@
   let packId = seedPacks[0].id;
   let selectedSeeds: string[] = [];
   let assetType: AssetType = 'images';
-  let locale = 'en-US';
+  let locale = 'en-GB';
   let maxSuggestions = 3;
   let assetsPerQuery = 20;
   let mode: ResearchMode = 'fast';
