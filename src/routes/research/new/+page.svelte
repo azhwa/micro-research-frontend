@@ -13,6 +13,7 @@
   let locale = 'en-GB';
   let maxSuggestions = 5;
   let assetsPerQuery = 30;
+  let autocompleteEnabled = true;
   let mode: ResearchMode = 'fast';
   let submitting = false;
   let error = '';
@@ -21,7 +22,7 @@
     if (!keyword.trim()) { error = 'Seed keyword wajib diisi.'; return; }
     submitting = true; error = '';
     try {
-      const run = await api.createRun({ keyword: keyword.trim(), category, assetType, locale, maxSuggestions, assetsPerQuery, mode });
+      const run = await api.createRun({ keyword: keyword.trim(), category, assetType, locale, maxSuggestions, assetsPerQuery, autocompleteEnabled, mode });
       await goto(`/research/${run.id}`);
     } catch (err) { error = err instanceof Error ? err.message : 'Research gagal dibuat'; }
     finally { submitting = false; }
@@ -46,6 +47,8 @@
 
       <div class="grid gap-4 sm:grid-cols-2"><div class="space-y-2"><label for="locale" class="text-sm font-medium">Locale</label><select id="locale" bind:value={locale} class="flex h-9 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-200 outline-none focus:border-cyan-400"><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="id-ID">Indonesian</option></select><p class="text-xs text-slate-600">Mempengaruhi suggestion Adobe.</p></div><div class="space-y-2"><label for="suggestions" class="text-sm font-medium">Max suggestions</label><Input id="suggestions" type="number" bind:value={maxSuggestions} /><p class="text-xs text-slate-600">1–50. Mulai kecil untuk menghemat request.</p></div></div>
       <div class="space-y-2"><label for="assets" class="text-sm font-medium">Assets per query</label><Input id="assets" type="number" bind:value={assetsPerQuery} /><p class="text-xs text-slate-600">1–100 aset untuk setiap kombinasi suggestion dan sort mode.</p></div>
+
+      <label class="flex cursor-pointer items-start gap-3 rounded-md border border-slate-800 bg-slate-950 p-3"><input type="checkbox" bind:checked={autocompleteEnabled} class="mt-0.5 h-4 w-4 accent-cyan-400" /><span><span class="block text-sm font-medium">Scrape Adobe autocomplete</span><span class="mt-1 block text-xs leading-5 text-slate-600">Jika aktif, sistem mengambil suggestion dari halaman bersih Adobe. Jika nonaktif, hanya seed keyword yang diproses dan research lebih cepat.</span></span></label>
 
       <div class="flex gap-3 rounded-md border border-cyan-400/15 bg-cyan-400/5 p-3 text-xs leading-5 text-slate-400"><Info size={16} class="mt-0.5 shrink-0 text-cyan-400" /><span>Adobe Stock tidak menampilkan angka download individual. Sistem menyimpan <span class="font-mono text-cyan-300">download_rank</span> sebagai proxy popularitas.</span></div>
       <div class="space-y-2"><p class="text-sm font-medium">Research mode</p><div class="grid gap-2 sm:grid-cols-2"><button type="button" class={`rounded-md border p-3 text-left transition-colors ${mode === 'fast' ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => mode = 'fast'}><span class="block text-sm font-medium">Fast</span><span class="mt-1 block text-[11px] opacity-70">Downloads only, autocomplete terbatas, keyword detail 1 asset/query.</span></button><button type="button" class={`rounded-md border p-3 text-left transition-colors ${mode === 'full' ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => mode = 'full'}><span class="block text-sm font-medium">Full</span><span class="mt-1 block text-[11px] opacity-70">Downloads, relevance, recent, dan keyword detail semua asset downloads.</span></button></div></div>

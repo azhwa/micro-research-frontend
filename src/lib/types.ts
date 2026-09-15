@@ -11,6 +11,7 @@ export interface ResearchRun {
   locale: string;
   maxSuggestions: number;
   assetsPerQuery: number;
+  autocompleteEnabled: boolean;
   mode: ResearchMode;
   status: RunStatus;
   progressTotal: number;
