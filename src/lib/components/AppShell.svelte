@@ -9,7 +9,6 @@
   let backendStatus: 'checking' | 'online' | 'offline' = 'checking';
   let authReady = false;
   let signedIn = false;
-  let isAdmin = false;
   let userButtonNode: HTMLDivElement;
   onMount(() => {
     let unsubscribe = () => {};
@@ -27,9 +26,6 @@
       };
       unsubscribe = clerk.addListener(syncAuth);
       syncAuth();
-      if (clerk.user) {
-        try { isAdmin = (await api.getAuthMe()).isAdmin; } catch { isAdmin = false; }
-      }
       if (userButtonNode && clerk.user) { clerk.mountUserButton(userButtonNode); unmountUserButton = () => clerk.unmountUserButton(userButtonNode); }
     })();
     return () => { unsubscribe(); unmountUserButton(); };
@@ -69,7 +65,7 @@
         <a href="/insights" class={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm', page.url.pathname.startsWith('/insights') ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200')}><BarChart3 size={16} /> Global insights</a>
         <a href="/discover" class={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm', page.url.pathname.startsWith('/discover') ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200')}><Compass size={16} /> Discover ideas</a>
         <a href="/compare" class={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm', page.url.pathname.startsWith('/compare') ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200')}><GitCompare size={16} /> Compare runs</a>
-        {#if isAdmin}<a href="/monitoring" class={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm', page.url.pathname.startsWith('/monitoring') ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200')}><Activity size={16} /> Monitoring</a>{/if}
+        <a href="/monitoring" class={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm', page.url.pathname.startsWith('/monitoring') ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200')}><Activity size={16} /> Monitoring</a>
         <a href="/research/new" class={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm', page.url.pathname.startsWith('/research/new') ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200')}><FlaskConical size={16} /> New research</a>
         <a href="/settings" class={cn('flex items-center gap-3 rounded-md px-3 py-2 text-sm', page.url.pathname.startsWith('/settings') ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200')}><Settings size={16} /> Settings</a>
       </nav>

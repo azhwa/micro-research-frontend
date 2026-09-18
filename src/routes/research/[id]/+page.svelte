@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Activity, ArrowLeft, BarChart3, Ban, Check, Download, ExternalLink, Film, Image, LoaderCircle, RefreshCw, Search, Sparkles, Tag, Trash2, X } from '@lucide/svelte';
+  import { Activity, ArrowLeft, BarChart3, Ban, Check, Download, ExternalLink, Film, Globe, Image, LoaderCircle, RefreshCw, Search, Sparkles, Tag, Trash2, X } from '@lucide/svelte';
   import { page } from '$app/state';
   import Badge from '$lib/components/ui/Badge.svelte';
   import Button from '$lib/components/ui/Button.svelte';
@@ -27,6 +27,15 @@
   let aiStatus = '';
   let timer: ReturnType<typeof setInterval> | undefined;
 
+  interface ScrapingLocationView {
+    ip: string | null;
+    location: string | null;
+    connection: string;
+    proxy: string | null;
+    isp: string | null;
+    note: string | null;
+  }
+
   $: progress = run?.progressTotal ? Math.min(100, Math.round((run.progressCompleted / run.progressTotal) * 100)) : 0;
   $: uniqueAssets = new Set(results.map((result) => result.assetId)).size;
   $: uniqueQueries = new Set(results.map((result) => result.query)).size;
@@ -35,11 +44,50 @@
   $: isTerminal = Boolean(run && ['completed', 'partial', 'failed', 'cancelled'].includes(run.status));
   $: latestAi = aiRecommendations.find((item) => item.status === 'completed') ?? aiRecommendations[0] ?? null;
   $: aiPayload = latestAi?.response && typeof latestAi.response === 'object' && !Array.isArray(latestAi.response) ? latestAi.response as { summary?: string; overallAssessment?: string; recommendations?: Array<{ assetConcept?: string; format?: string; titleIdeas?: string[]; keywordCluster?: string[]; rationale?: string; demandSignal?: string; competitionSignal?: string; confidence?: string }>; cautions?: string[] } : null;
+  $: scrapingLocation = parseScrapingLocation(events.find((event) => event.eventType === 'scraping_location')) ?? {
+    ip: null,
+    location: null,
+    connection: 'Not checked',
+    proxy: null,
+    isp: null,
+    note: 'Belum ada data lokasi. Jalankan research baru untuk merekam IP.'
+  };
+
+  function metadataText(metadata: Record<string, unknown>, key: string): string | null {
+    return typeof metadata[key] === 'string' && metadata[key] ? metadata[key] as string : null;
+  }
+
+  function parseScrapingLocation(event?: ResearchEvent): ScrapingLocationView | null {
+    if (!event?.metadataJson) return null;
+    try {
+      const metadata = JSON.parse(event.metadataJson) as Record<string, unknown>;
+      const location = [metadataText(metadata, 'city'), metadataText(metadata, 'region'), metadataText(metadata, 'country')].filter(Boolean).join(', ') || null;
+      return {
+        ip: metadataText(metadata, 'ip'),
+        location,
+        connection: metadata.connection === 'proxy' ? 'Proxy' : 'Direct VPS',
+        proxy: metadataText(metadata, 'proxy'),
+        isp: metadataText(metadata, 'isp') ?? metadataText(metadata, 'organization'),
+        note: metadataText(metadata, 'lookupError')
+      };
+    } catch {
+      return null;
+    }
+  }
 
   function eventDetail(event: ResearchEvent): string {
     if (!event.metadataJson) return '';
     try {
       const metadata = JSON.parse(event.metadataJson) as Record<string, unknown>;
+      if (event.eventType === 'scraping_location') {
+        const location = [metadataText(metadata, 'city'), metadataText(metadata, 'region'), metadataText(metadata, 'country')].filter(Boolean).join(', ');
+        return [
+          metadataText(metadata, 'ip') ? `IP: ${metadataText(metadata, 'ip')}` : '',
+          location ? `lokasi: ${location}` : '',
+          metadataText(metadata, 'isp') ? `ISP: ${metadataText(metadata, 'isp')}` : '',
+          metadataText(metadata, 'lookupError') ? `lookup: ${metadataText(metadata, 'lookupError')}` : ''
+        ].filter(Boolean).join(' Â· ');
+      }
       const parts = [
         typeof metadata.failureType === 'string' ? `cause: ${metadata.failureType}` : '',
         typeof metadata.errorName === 'string' ? metadata.errorName : '',
@@ -124,6 +172,22 @@
 
     <div class="grid gap-3 sm:grid-cols-4"><Card className="p-4"><p class="text-xs text-slate-500">Suggestions</p><p class="mt-2 text-xl font-semibold">{run.maxSuggestions}</p><p class="mt-1 text-[11px] text-slate-600">Autocomplete target</p></Card><Card className="p-4"><p class="text-xs text-slate-500">Queries</p><p class="mt-2 text-xl font-semibold">{uniqueQueries}</p><p class="mt-1 text-[11px] text-slate-600">Across sort modes</p></Card><Card className="p-4"><p class="text-xs text-slate-500">Unique assets</p><p class="mt-2 text-xl font-semibold">{uniqueAssets}</p><p class="mt-1 text-[11px] text-slate-600">Observed assets</p></Card><Card className="p-4"><p class="text-xs text-slate-500">Keywords</p><p class="mt-2 text-xl font-semibold text-cyan-300">{keywords.length || '—'}</p><p class="mt-1 text-[11px] text-slate-600">Detail metadata</p></Card></div>
     <div class="flex items-center gap-1 border-b border-slate-800"><button class={`inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm ${detailTab === 'overview' ? 'border-cyan-400 text-slate-100' : 'border-transparent text-slate-500 hover:text-slate-300'}`} on:click={() => detailTab = 'overview'}><Activity size={15} /> Overview</button><button class={`inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm ${detailTab === 'insights' ? 'border-cyan-400 text-slate-100' : 'border-transparent text-slate-500 hover:text-slate-300'}`} on:click={() => detailTab = 'insights'}><BarChart3 size={15} /> Insights</button></div>
+    {#if scrapingLocation}
+      <Card className="border-slate-800 p-4">
+        <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div class="flex items-center gap-3">
+            <div class="rounded-md bg-cyan-400/10 p-2"><Globe size={16} class="text-cyan-300" /></div>
+            <div><p class="text-xs text-slate-500">Scraping connection</p><p class="mt-1 text-sm font-medium text-slate-200">{scrapingLocation.connection}{scrapingLocation.location ? ` · ${scrapingLocation.location}` : ''}</p></div>
+          </div>
+          <div class="text-left sm:text-right"><p class="text-[11px] text-slate-500">Public egress IP</p><p class={`font-mono text-sm ${scrapingLocation.ip ? 'text-cyan-300' : 'text-amber-300'}`}>{scrapingLocation.ip ?? 'Not available'}</p></div>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-800 pt-3 text-[11px] text-slate-500">
+          {#if scrapingLocation.proxy}<span>Proxy <b class="font-mono text-slate-300">{scrapingLocation.proxy}</b></span>{/if}
+          {#if scrapingLocation.isp}<span>Network <b class="text-slate-300">{scrapingLocation.isp}</b></span>{/if}
+          {#if scrapingLocation.note}<span class="text-amber-300">{scrapingLocation.note}</span>{/if}
+        </div>
+      </Card>
+    {/if}
     {#if detailTab === 'insights'}
     {#if summary}
       <Card className="p-4 sm:p-5">
@@ -162,7 +226,7 @@
     </Card>
 
     <Card>
-      <div class="flex flex-col gap-3 border-b border-slate-800 px-4 py-3 md:flex-row md:items-center md:justify-between"><div class="flex items-center gap-1 rounded-md bg-slate-950 p-1"><button class={`rounded px-3 py-1.5 text-xs ${tab === 'assets' ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`} on:click={() => tab = 'assets'}><Image size={13} class="mr-1 inline" /> Assets</button><button class={`rounded px-3 py-1.5 text-xs ${tab === 'keywords' ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`} on:click={() => tab = 'keywords'}><Tag size={13} class="mr-1 inline" /> Keywords</button></div><div class="flex flex-col gap-2 sm:flex-row"><div class="relative"><Search size={14} class="absolute left-2.5 top-2.5 text-slate-600" /><input bind:value={search} placeholder={tab === 'assets' ? 'Filter assets…' : 'Filter keywords…'} class="h-8 w-full rounded-md border border-slate-700 bg-slate-950 pl-8 pr-3 text-xs outline-none placeholder:text-slate-600 focus:border-cyan-400 sm:w-52" /></div>{#if tab === 'assets'}<select bind:value={sortFilter} class="h-8 rounded-md border border-slate-700 bg-slate-950 px-2 text-xs text-slate-300 outline-none focus:border-cyan-400"><option value="all">All sort modes</option><option value="downloads">Downloads</option><option value="relevance">Relevance</option><option value="recent">Most recent</option></select><Button size="sm" variant="outline" on:click={downloadCsv} disabled={!filteredResults.length}><Download size={13} /> CSV</Button>{/if}</div></div>
+      <div class="flex flex-col gap-3 border-b border-slate-800 px-4 py-3 md:flex-row md:items-center md:justify-between"><div class="flex items-center gap-1 rounded-md bg-slate-950 p-1"><button class={`rounded px-3 py-1.5 text-xs ${tab === 'assets' ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`} on:click={() => tab = 'assets'}><Image size={13} class="mr-1 inline" /> Assets</button><button class={`rounded px-3 py-1.5 text-xs ${tab === 'keywords' ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`} on:click={() => tab = 'keywords'}><Tag size={13} class="mr-1 inline" /> Keywords</button></div><div class="flex flex-col gap-2 sm:flex-row"><div class="relative"><Search size={14} class="absolute left-2.5 top-2.5 text-slate-600" /><input aria-label={tab === 'assets' ? 'Filter assets' : 'Filter keywords'} bind:value={search} placeholder={tab === 'assets' ? 'Filter assets…' : 'Filter keywords…'} class="h-8 w-full rounded-md border border-slate-700 bg-slate-950 pl-8 pr-3 text-xs outline-none placeholder:text-slate-600 focus:border-cyan-400 sm:w-52" /></div>{#if tab === 'assets'}<select aria-label="Filter sort mode" bind:value={sortFilter} class="h-8 rounded-md border border-slate-700 bg-slate-950 px-2 text-xs text-slate-300 outline-none focus:border-cyan-400"><option value="all">All sort modes</option><option value="downloads">Downloads</option><option value="relevance">Relevance</option><option value="recent">Most recent</option></select><Button size="sm" variant="outline" on:click={downloadCsv} disabled={!filteredResults.length}><Download size={13} /> CSV</Button>{/if}</div></div>
 
       {#if tab === 'assets'}
         {#if !filteredResults.length}<div class="px-4 py-14 text-center text-sm text-slate-500">{isTerminal ? 'Belum ada asset yang tersimpan untuk filter ini.' : 'Hasil akan muncul setelah worker selesai memproses query.'}</div>{:else}<div class="overflow-x-auto"><table class="w-full min-w-[760px] text-left text-xs"><thead class="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-600"><tr><th class="px-4 py-3 font-medium">Asset</th><th class="px-4 py-3 font-medium">Query</th><th class="px-4 py-3 font-medium">Sort</th><th class="px-4 py-3 font-medium">Rank</th><th class="px-4 py-3 font-medium">Size</th><th class="px-4 py-3 font-medium"></th></tr></thead><tbody class="divide-y divide-slate-800/70">{#each filteredResults as item}<tr class="hover:bg-slate-800/30"><td class="max-w-[340px] px-4 py-3"><div class="flex items-center gap-3"><div class="h-10 w-14 shrink-0 overflow-hidden rounded bg-slate-800">{#if item.thumbnailUrl}<img src={item.thumbnailUrl} alt="" loading="lazy" class="h-full w-full object-cover" />{:else}{#if item.assetType === 'videos'}<Film size={15} class="m-3 text-slate-600" />{:else}<Image size={15} class="m-3 text-slate-600" />{/if}{/if}</div><div class="min-w-0"><p class="truncate font-medium text-slate-200" title={item.title}>{item.title || 'Untitled asset'}</p><p class="mt-1 font-mono text-[10px] text-slate-600">#{item.externalId} {#if item.isPremium}<span class="text-amber-400">· Premium</span>{/if}</p></div></div></td><td class="max-w-[170px] truncate px-4 py-3 text-slate-400">{item.query}</td><td class="px-4 py-3"><Badge tone={item.sortMode === 'downloads' ? 'default' : 'muted'}>{item.sortMode}</Badge></td><td class="px-4 py-3 font-mono font-semibold text-slate-200">{item.rank}</td><td class="px-4 py-3 font-mono text-slate-500">{item.width && item.height ? `${item.width}×${item.height}` : '—'}</td><td class="px-4 py-3 text-right"><a href={item.assetUrl} target="_blank" rel="noreferrer" class="inline-flex text-slate-500 hover:text-cyan-300" aria-label="Open on Adobe Stock"><ExternalLink size={15} /></a></td></tr>{/each}</tbody></table></div>{/if}
