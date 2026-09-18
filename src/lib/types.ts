@@ -1,5 +1,5 @@
 export type AssetType = 'images' | 'videos';
-export type ResearchMode = 'fast' | 'full';
+export type ResearchMode = 'fast' | 'full' | 'primary';
 export type RunStatus = 'pending' | 'running' | 'completed' | 'partial' | 'failed' | 'cancelled';
 export type SortMode = 'downloads' | 'relevance' | 'recent';
 

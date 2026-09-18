@@ -81,7 +81,7 @@ export const api = {
   getGlobalAiRecommendations: (limit = 20) => request<AiRecommendation[]>(`/api/ai-recommendations/global?limit=${limit}`),
   prepareAiRecommendation: (id: string, model = 'gemini-3.5-flash-lite') => request<{ recommendation: AiRecommendation; context: Record<string, unknown> }>(`/api/research-runs/${id}/ai-recommendations/prepare`, { method: 'POST', body: JSON.stringify({ promptVersion: 'recommendation-v1', model }) }),
   getAiRecommendations: (id: string, limit = 20) => request<AiRecommendation[]>(`/api/research-runs/${id}/ai-recommendations?limit=${limit}`),
-  createRun: (body: { keyword: string; category?: string; assetType: 'images' | 'videos'; locale: string; maxSuggestions: number; assetsPerQuery: number; autocompleteEnabled: boolean; mode: 'fast' | 'full' }) =>
+  createRun: (body: { keyword: string; category?: string; assetType: 'images' | 'videos'; locale: string; maxSuggestions: number; assetsPerQuery: number; autocompleteEnabled: boolean; mode: 'fast' | 'full' | 'primary' }) =>
     request<RunCreated>('/api/research-runs', { method: 'POST', body: JSON.stringify(body) }),
   cancelRun: (id: string) => request<ResearchRun>(`/api/research-runs/${id}/cancel`, { method: 'POST' })
 };

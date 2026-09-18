@@ -14,7 +14,7 @@
   let maxSuggestions = 5;
   let assetsPerQuery = 30;
   let autocompleteEnabled = true;
-  let mode: ResearchMode = 'fast';
+  let mode: ResearchMode = 'primary';
   let submitting = false;
   let error = '';
 
@@ -27,12 +27,26 @@
     } catch (err) { error = err instanceof Error ? err.message : 'Research gagal dibuat'; }
     finally { submitting = false; }
   }
+
+  function selectMode(nextMode: ResearchMode) {
+    if (mode === 'primary' && nextMode !== 'primary') {
+      maxSuggestions = 5;
+      assetsPerQuery = 30;
+      autocompleteEnabled = true;
+    }
+    mode = nextMode;
+    if (nextMode === 'primary') {
+      maxSuggestions = 1;
+      assetsPerQuery = 100;
+      autocompleteEnabled = false;
+    }
+  }
 </script>
 
 <svelte:head><title>New research — StockScope</title></svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-6">
-  <div><a href="/" class="mb-4 inline-flex items-center gap-2 text-xs text-slate-500 hover:text-slate-200"><ArrowLeft size={14} /> Back to overview</a><p class="text-xs font-medium uppercase tracking-widest text-cyan-400">Research setup</p><h1 class="mt-2 text-2xl font-semibold tracking-tight">Start a new research</h1><p class="mt-1 text-sm text-slate-500">Gunakan keyword inti untuk mengambil suggestion dan ranking aset Adobe Stock.</p></div>
+  <div><a href="/" class="mb-4 inline-flex items-center gap-2 text-xs text-slate-500 hover:text-slate-200"><ArrowLeft size={14} /> Back to overview</a><p class="text-xs font-medium uppercase tracking-widest text-cyan-400">Research setup</p><h1 class="mt-2 text-2xl font-semibold tracking-tight">Start a new research</h1><p class="mt-1 text-sm text-slate-500">Mulai dari snapshot page-one seed, lalu gunakan related discovery sebagai data pendukung.</p></div>
 
   <Card className="p-5 sm:p-6">
     <form on:submit|preventDefault={submit} class="space-y-6">
@@ -51,10 +65,10 @@
       <label class="flex cursor-pointer items-start gap-3 rounded-md border border-slate-800 bg-slate-950 p-3"><input type="checkbox" bind:checked={autocompleteEnabled} class="mt-0.5 h-4 w-4 accent-cyan-400" /><span><span class="block text-sm font-medium">Scrape Adobe autocomplete</span><span class="mt-1 block text-xs leading-5 text-slate-600">Jika aktif, sistem mengambil suggestion dari halaman bersih Adobe. Jika nonaktif, hanya seed keyword yang diproses dan research lebih cepat.</span></span></label>
 
       <div class="flex gap-3 rounded-md border border-cyan-400/15 bg-cyan-400/5 p-3 text-xs leading-5 text-slate-400"><Info size={16} class="mt-0.5 shrink-0 text-cyan-400" /><span>Adobe Stock tidak menampilkan angka download individual. Sistem menyimpan <span class="font-mono text-cyan-300">download_rank</span> sebagai proxy popularitas.</span></div>
-      <div class="space-y-2"><p class="text-sm font-medium">Research mode</p><div class="grid gap-2 sm:grid-cols-2"><button type="button" class={`rounded-md border p-3 text-left transition-colors ${mode === 'fast' ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => mode = 'fast'}><span class="block text-sm font-medium">Fast</span><span class="mt-1 block text-[11px] opacity-70">Downloads only, autocomplete terbatas, keyword detail 1 asset/query.</span></button><button type="button" class={`rounded-md border p-3 text-left transition-colors ${mode === 'full' ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => mode = 'full'}><span class="block text-sm font-medium">Full</span><span class="mt-1 block text-[11px] opacity-70">Downloads, relevance, recent, dan keyword detail semua asset downloads.</span></button></div></div>
+      <div class="space-y-2"><p class="text-sm font-medium">Research mode</p><div class="grid gap-2 sm:grid-cols-3"><button type="button" class={`rounded-md border p-3 text-left transition-colors ${mode === 'primary' ? 'border-violet-400/60 bg-violet-400/10 text-violet-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => selectMode('primary')}><span class="block text-sm font-medium">Research Page One</span><span class="mt-1 block text-[11px] opacity-70">Seed utama, 3 sort, hingga 100 asset per sort. Tanpa autocomplete.</span></button><button type="button" class={`rounded-md border p-3 text-left transition-colors ${mode === 'fast' ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => selectMode('fast')}><span class="block text-sm font-medium">Fast</span><span class="mt-1 block text-[11px] opacity-70">Downloads only, autocomplete terbatas, keyword detail 1 asset/query.</span></button><button type="button" class={`rounded-md border p-3 text-left transition-colors ${mode === 'full' ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => selectMode('full')}><span class="block text-sm font-medium">Full</span><span class="mt-1 block text-[11px] opacity-70">Downloads, relevance, recent, autocomplete, dan related discovery.</span></button></div></div>
 
       {#if error}<div class="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>{/if}
-      <div class="flex justify-end gap-2 border-t border-slate-800 pt-5"><a href="/"><Button variant="ghost" type="button">Cancel</Button></a><Button type="submit" disabled={submitting || !keyword.trim()}><Play size={15} />{submitting ? 'Creating…' : 'Start research'}</Button></div>
+      <div class="flex justify-end gap-2 border-t border-slate-800 pt-5"><a href="/"><Button variant="ghost" type="button">Cancel</Button></a><Button type="submit" disabled={submitting || !keyword.trim()}><Play size={15} />{submitting ? 'Creating…' : mode === 'primary' ? 'Research Page One' : 'Start research'}</Button></div>
     </form>
   </Card>
 </div>
