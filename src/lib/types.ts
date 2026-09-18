@@ -67,19 +67,37 @@ export interface KeywordOpportunity {
   keyword: string;
   normalizedKeyword: string;
   source: string;
+  isSeed: boolean;
+  researchStatus: 'directly_researched' | 'discovered';
+  scoreStatus: 'scored' | 'provisional' | 'insufficient_data' | 'not_directly_researched';
+  rank: number | null;
+  score: number | null;
+  level: 0 | 1 | 2 | 3 | 4 | 5;
+  label: string;
+  indicator: string;
+  confidence: 'low' | 'medium' | 'high';
   autocompletePosition: number | null;
   suggestionFrequency: number;
   queryCount: number;
   assetCount: number;
+  supportingAssetCount: number;
+  enrichedSampleCount: number;
   bestDownloadRank: number | null;
   averageDownloadRank: number | null;
   bestRecentRank: number | null;
+  bestRelevanceRank: number | null;
   resultCount: number | null;
-  demandScore: number;
-  competitionScore: number;
-  freshnessScore: number;
-  consistencyScore: number;
-  opportunityScore: number;
+  resultCountQualifier: 'displayed' | 'at_least' | 'approximate' | 'unknown';
+  downloadSignalScore: number | null;
+  lowCompetitionScore: number | null;
+  relevanceSignalScore: number | null;
+  freshnessSignalScore: number | null;
+  crossSortScore: number | null;
+  autocompleteScore: number | null;
+  opportunityScore: number | null;
+  evidenceQueries: string[];
+  firstObservedAt: string | null;
+  lastObservedAt: string | null;
 }
 
 export interface AssetOpportunity {
@@ -92,25 +110,43 @@ export interface AssetOpportunity {
   width: number | null;
   height: number | null;
   isPremium: boolean;
+  query: string;
   appearances: number;
   sortModes: string[];
+  sortCoverage: number;
+  evaluatedSortCount: number;
+  crossSortLabel: 'strong_consensus' | 'multi_signal' | 'single_signal' | 'partial_evidence';
+  sortStatus: Record<SortMode, 'found' | 'not_observed_in_sample' | 'not_collected' | 'failed'>;
+  evidence: string[];
+  ranks: Record<SortMode, number | null>;
   bestDownloadRank: number | null;
   bestRecentRank: number | null;
   bestRelevanceRank: number | null;
   keywordCount: number;
-  assetScore: number;
+  assetScore: number | null;
+  scoreStatus: 'scored' | 'insufficient_data';
+  firstObservedAt: string | null;
+  lastObservedAt: string | null;
 }
 
 export interface ResearchSummary {
   runId: string;
   scoringVersion: string;
   generatedAt: string;
+  dataAge: {
+    firstObservedAt: string | null;
+    lastObservedAt: string | null;
+    dataAgeDays: number | null;
+    status: 'fresh' | 'aging' | 'stale' | 'refresh_recommended' | 'unknown';
+    refreshRecommended: boolean;
+  };
   totals: {
     suggestions: number;
     queries: number;
     expectedQueries: number;
     uniqueAssets: number;
     keywords: number;
+    scoredKeywords: number;
   };
   dataQuality: {
     queryCoveragePct: number;
@@ -124,11 +160,11 @@ export interface ResearchSummary {
     resultCountsAvailable: number;
   };
   scores: {
-    demandScore: number;
-    competitionScore: number;
-    freshnessScore: number;
-    consistencyScore: number;
-    opportunityScore: number;
+    demandScore: number | null;
+    competitionScore: number | null;
+    freshnessScore: number | null;
+    consistencyScore: number | null;
+    opportunityScore: number | null;
   };
   topKeywords: KeywordOpportunity[];
   topAssets: AssetOpportunity[];
@@ -143,7 +179,7 @@ export interface GlobalKeywordInsight {
   researchCount: number;
   snapshotCount: number;
   confidence: 'low' | 'medium' | 'high';
-  trend: 'up' | 'stable' | 'down';
+  trend: 'up' | 'stable' | 'down' | 'unknown';
   averageOpportunityScore: number | null;
   globalOpportunityScore: number | null;
   averageDemandScore: number | null;
@@ -161,11 +197,32 @@ export interface GlobalKeywordInsight {
 export interface GlobalInsights {
   generatedAt: string;
   filters: { assetType: string; locale: string; category: string };
-  totals: { researchRuns: number; keywords: number; snapshots: number };
+  totals: { researchRuns: number; keywords: number; assets: number; snapshots: number };
   keywords: GlobalKeywordInsight[];
+  assets: GlobalAssetInsight[];
 }
 
-export interface ComparisonMetric { first: number; second: number; delta: number; }
+export interface GlobalAssetInsight {
+  assetId: string;
+  externalId: string;
+  title: string;
+  assetUrl: string;
+  thumbnailUrl: string | null;
+  assetType: string;
+  locale: string;
+  category: string;
+  researchCount: number;
+  effectiveObservationCount: number;
+  weightedScore: number | null;
+  confidence: 'low' | 'medium' | 'high';
+  bestDownloadRank: number | null;
+  bestRelevanceRank: number | null;
+  bestRecentRank: number | null;
+  firstObservedAt: string;
+  lastObservedAt: string;
+}
+
+export interface ComparisonMetric { first: number | null; second: number | null; delta: number | null; }
 export interface ResearchComparison {
   generatedAt: string;
   firstRun: Pick<ResearchRun, 'id' | 'seedKeyword' | 'category' | 'assetType' | 'locale' | 'status'>;
