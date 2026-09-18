@@ -14,6 +14,7 @@
 
   const statusTone = (status: ResearchRun['status']) => status === 'completed' ? 'success' : status === 'failed' ? 'danger' : status === 'running' ? 'default' : status === 'cancelled' ? 'muted' : 'warning';
   const statusLabel = (status: ResearchRun['status']) => ({ pending: 'Pending', running: 'Running', completed: 'Completed', partial: 'Partial', failed: 'Failed', cancelled: 'Cancelled' })[status];
+  const researchLabel = (run: ResearchRun) => run.seedKeyword || (run.mode === 'primary' ? 'Adobe Stock Page One' : 'Untitled research');
 
   async function loadRuns() {
     loading = true;
@@ -70,11 +71,11 @@
           <div class="flex items-center gap-2 pr-2 transition-colors hover:bg-slate-800/40">
           <a href={`/research/${run.id}`} class="flex min-w-0 flex-1 items-center gap-4 px-4 py-3">
             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-800 text-slate-400">{#if run.assetType === 'videos'}<Video size={15} />{:else}<Image size={15} />{/if}</div>
-            <div class="min-w-0 flex-1"><div class="flex items-center gap-2"><p class="truncate text-sm font-medium text-slate-200">{run.seedKeyword}</p><Badge tone={statusTone(run.status)}>{statusLabel(run.status)}</Badge></div><p class="mt-1 text-xs text-slate-500">{run.assetType} · {run.locale} · {formatDate(run.createdAt)}</p></div>
+            <div class="min-w-0 flex-1"><div class="flex items-center gap-2"><p class="truncate text-sm font-medium text-slate-200">{researchLabel(run)}</p><Badge tone={statusTone(run.status)}>{statusLabel(run.status)}</Badge></div><p class="mt-1 text-xs text-slate-500">{run.mode === 'primary' ? 'Page One' : run.assetType} · {run.locale} · {formatDate(run.createdAt)}</p></div>
             <div class="hidden text-right sm:block"><p class="text-xs text-slate-400">{run.progressCompleted}/{run.progressTotal || '—'} queries</p><p class="mt-1 text-[11px] text-slate-600">{run.maxSuggestions} suggestions</p></div>
             <ArrowUpRight size={15} class="shrink-0 text-slate-600" />
           </a>
-          {#if !['pending', 'running'].includes(run.status)}<Button variant="ghost" size="icon" ariaLabel={`Delete ${run.seedKeyword}`} on:click={(event) => deleteRun(event, run)}><Trash2 size={15} class="text-slate-500 hover:text-red-300" /></Button>{/if}
+          {#if !['pending', 'running'].includes(run.status)}<Button variant="ghost" size="icon" ariaLabel={`Delete ${researchLabel(run)}`} on:click={(event) => deleteRun(event, run)}><Trash2 size={15} class="text-slate-500 hover:text-red-300" /></Button>{/if}
           </div>
         {/each}
       </div>

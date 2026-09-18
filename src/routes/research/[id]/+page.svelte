@@ -33,6 +33,7 @@
   interface ScrapingLocationView { ip: string | null; location: string | null; connection: string; isp: string | null; note: string | null; }
 
   $: progress = run?.progressTotal ? Math.min(100, Math.round((run.progressCompleted / run.progressTotal) * 100)) : 0;
+  $: researchLabel = run?.seedKeyword || (run?.mode === 'primary' ? 'Adobe Stock Page One' : 'Research');
   $: uniqueAssets = new Set(results.map((item) => item.assetId)).size;
   $: uniqueQueries = new Set(results.map((item) => item.query)).size;
   $: isTerminal = Boolean(run && ['completed', 'partial', 'failed', 'cancelled'].includes(run.status));
@@ -152,11 +153,11 @@
   });
 </script>
 
-<svelte:head><title>{run ? `${run.seedKeyword} — StockScope` : 'Research — StockScope'}</title></svelte:head>
+<svelte:head><title>{run ? `${researchLabel} — StockScope` : 'Research — StockScope'}</title></svelte:head>
 
 <div class="mx-auto max-w-7xl space-y-5">
   <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-    <div><a href="/" class="mb-4 inline-flex items-center gap-2 text-xs text-slate-500 hover:text-slate-200"><ArrowLeft size={14} /> Back to overview</a><div class="flex items-center gap-2"><p class="text-xs font-medium uppercase tracking-widest text-cyan-400">Research run</p>{#if run}<Badge tone={run.status === 'completed' ? 'success' : run.status === 'failed' ? 'danger' : run.status === 'running' ? 'default' : 'warning'}>{run.status}</Badge>{/if}</div><h1 class="mt-2 text-2xl font-semibold tracking-tight">{run?.seedKeyword ?? 'Loading research…'}</h1><p class="mt-1 text-sm text-slate-500">{run?.assetType ?? 'Adobe Stock'} · {run?.locale ?? ''} · started {formatDate(run?.createdAt)}</p></div>
+    <div><a href="/" class="mb-4 inline-flex items-center gap-2 text-xs text-slate-500 hover:text-slate-200"><ArrowLeft size={14} /> Back to overview</a><div class="flex items-center gap-2"><p class="text-xs font-medium uppercase tracking-widest text-cyan-400">Research run</p>{#if run}<Badge tone={run.status === 'completed' ? 'success' : run.status === 'failed' ? 'danger' : run.status === 'running' ? 'default' : 'warning'}>{run.status}</Badge>{/if}</div><h1 class="mt-2 text-2xl font-semibold tracking-tight">{run ? researchLabel : 'Loading research…'}</h1><p class="mt-1 text-sm text-slate-500">{run?.mode === 'primary' ? 'Adobe Stock Page One' : run?.assetType ?? 'Adobe Stock'} · {run?.locale ?? ''} · started {formatDate(run?.createdAt)}</p></div>
     <div class="flex flex-wrap gap-2">{#if run && ['pending', 'running'].includes(run.status)}<Button variant="destructive" size="sm" on:click={cancel}><Ban size={14} /> Cancel</Button>{:else if run && isTerminal}<Button size="sm" on:click={rerunResearch} disabled={rerunning}><RefreshCw size={14} class={rerunning ? 'animate-spin' : ''} /> {rerunning ? 'Membuat…' : 'Riset ulang'}</Button><Button variant="ghost" size="sm" on:click={deleteRun}><Trash2 size={14} /> Delete</Button>{/if}<Button variant="outline" size="sm" on:click={() => loadData(true)} disabled={refreshing}><RefreshCw size={14} class={refreshing ? 'animate-spin' : ''} /> Refresh</Button></div>
   </div>
 
