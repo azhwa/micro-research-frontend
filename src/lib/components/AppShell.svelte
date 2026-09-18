@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Activity, BarChart3, Compass, Database, FlaskConical, GitCompare, KeyRound, Layers3, Search, Settings } from '@lucide/svelte';
+  import { Activity, BarChart3, Compass, Database, FlaskConical, GitCompare, KeyRound, Layers3, LogOut, Search, Settings } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -10,6 +10,13 @@
   let authReady = false;
   let signedIn = false;
   let userButtonNode: HTMLDivElement;
+
+  async function handleLogout(): Promise<void> {
+    const clerk = await loadClerk();
+    await clerk?.signOut();
+    await goto('/sign-in');
+  }
+
   onMount(() => {
     let unsubscribe = () => {};
     let unmountUserButton = () => {};
@@ -66,7 +73,7 @@
         <span class="text-sm font-semibold tracking-tight">Stock<span class="text-cyan-400">Scope</span></span>
         <span class="hidden rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-500 sm:inline">MVP</span>
       </a>
-      <div class="flex items-center gap-3 text-xs text-slate-500"><span class={`h-1.5 w-1.5 rounded-full ${backendStatus === 'online' ? 'bg-emerald-400' : backendStatus === 'offline' ? 'bg-red-400' : 'bg-amber-400'}`}></span>{backendStatus === 'online' ? 'Backend online' : backendStatus === 'offline' ? 'Backend offline' : 'Checking backend'}<div bind:this={userButtonNode} class="min-h-7 min-w-7"></div></div>
+      <div class="flex items-center gap-3 text-xs text-slate-500"><span class={`h-1.5 w-1.5 rounded-full ${backendStatus === 'online' ? 'bg-emerald-400' : backendStatus === 'offline' ? 'bg-red-400' : 'bg-amber-400'}`}></span>{backendStatus === 'online' ? 'Backend online' : backendStatus === 'offline' ? 'Backend offline' : 'Checking backend'}<div bind:this={userButtonNode} class="min-h-7 min-w-7"></div><button type="button" on:click={() => void handleLogout()} aria-label="Logout" title="Logout" class="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-700 px-2.5 text-xs text-slate-400 transition-colors hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-300"><LogOut size={14} /><span class="hidden sm:inline">Logout</span></button></div>
     </div>
   </header>
   <nav class="flex gap-2 overflow-x-auto border-b border-slate-800/70 px-4 py-2 lg:hidden">
