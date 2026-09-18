@@ -155,6 +155,7 @@ export interface ResearchSummary {
     confidence: 'low' | 'medium' | 'high';
     warnings: string[];
     downloadsAssets: number;
+    observedAssets: number;
     assetsWithKeywords: number;
     missingKeywordAssets: number;
     resultCountsAvailable: number;
