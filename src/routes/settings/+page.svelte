@@ -18,7 +18,11 @@
   let testingId = '';
   let proxies: ProxyEndpoint[] = [];
   let proxyLabel = 'Free proxy';
-  let proxyUrl = '';
+  let proxyProtocol = 'http';
+  let proxyHost = '';
+  let proxyPort = '';
+  let proxyUsername = '';
+  let proxyPassword = '';
   let proxySaving = false;
   let proxyTestingId = '';
   let proxyValidating = false;
@@ -88,16 +92,20 @@
   }
 
   async function addProxy() {
-    if (!proxyUrl.trim()) { error = 'Proxy URL wajib diisi'; return; }
+    if (!proxyHost.trim() || !proxyPort.trim()) { error = 'Host dan port proxy wajib diisi'; return; }
     proxySaving = true; error = ''; notice = '';
     try {
-      const result = await api.createProxyBatch({ label: proxyLabel, proxyUrl });
-      proxyUrl = '';
-      proxies = [...proxies, ...result.created];
-      notice = result.created.length + ' proxy tersimpan.' + (result.rejected.length ? ' ' + result.rejected.length + ' baris ditolak.' : '');
-      if (result.rejected.length) {
-        error = result.rejected.map((item) => item.value + ': ' + item.reason).join(' | ');
-      }
+      const result = await api.createProxy({
+        label: proxyLabel,
+        protocol: proxyProtocol,
+        host: proxyHost,
+        port: proxyPort,
+        username: proxyUsername,
+        password: proxyPassword
+      });
+      proxyHost = ''; proxyPort = ''; proxyUsername = ''; proxyPassword = '';
+      proxies = [...proxies, result];
+      notice = 'Proxy tersimpan. Jalankan Test Adobe sebelum research.';
     } catch (err) {
       error = err instanceof Error ? err.message : 'Proxy tidak dapat disimpan';
     } finally {
@@ -110,7 +118,7 @@
     try {
       const result = await api.testProxy(id);
       proxies = proxies.map((item) => item.id === id ? result.proxy : item);
-      if (result.ok) notice = 'Proxy berhasil: ' + (result.statusCode ?? 'unknown') + ' ' + result.pageTitle;
+      if (result.ok) notice = result.message;
       else error = result.message;
     } catch (err) {
       error = err instanceof Error ? err.message : 'Proxy test gagal';
@@ -169,13 +177,17 @@
   <Card><div class="border-b border-slate-800 px-5 py-4"><h2 class="text-sm font-medium">Your keys</h2><p class="mt-1 text-xs text-slate-500">Hanya key milik akun Anda yang ditampilkan.</p></div>{#if loading}<div class="flex items-center justify-center gap-2 px-5 py-12 text-sm text-slate-500"><LoaderCircle size={16} class="animate-spin" /> Loading keys…</div>{:else if !keys.length}<div class="px-5 py-12 text-center text-sm text-slate-500">Belum ada Gemini API key.</div>{:else}<div class="divide-y divide-slate-800/70">{#each keys as item}<div class="flex flex-wrap items-center gap-3 px-5 py-4"><div class="flex h-8 w-8 items-center justify-center rounded-md bg-slate-800 text-cyan-300"><KeyRound size={15} /></div><div class="min-w-0 flex-1"><p class="truncate text-sm font-medium text-slate-200">{item.label}</p><p class="mt-1 font-mono text-[11px] text-slate-500">••••{item.keyHint}</p></div><Badge tone={item.status === 'active' ? 'success' : 'muted'}>{item.status}</Badge>{#if item.failureCount}<span class="text-[11px] text-amber-300">{item.failureCount} failures</span>{/if}<div class="flex gap-2"><Button variant="outline" size="sm" on:click={() => testKey(item.id)} disabled={testingId === item.id}>{testingId === item.id ? 'Testing…' : 'Test'}</Button><Button variant="ghost" size="sm" on:click={() => toggleKey(item)}>{item.status === 'active' ? 'Disable' : 'Enable'}</Button><Button variant="ghost" size="icon" ariaLabel="Delete key" on:click={() => removeKey(item)}><Trash2 size={15} class="text-red-300" /></Button></div></div>{/each}</div>{/if}</Card>
     <Card className="p-5">
       <div class="flex items-center gap-2"><Network size={16} class="text-cyan-300" /><h2 class="text-sm font-medium">Adobe proxy list</h2></div>
-      <p class="mt-2 text-xs leading-5 text-slate-500">Proxy dipakai bergiliran oleh crawler backend. URL dan kredensial disimpan terenkripsi; hanya host dan port yang ditampilkan.</p>
-      <form class="mt-5 grid gap-3 sm:grid-cols-[1fr_2fr_auto] sm:items-end" on:submit|preventDefault={addProxy}>
-        <div class="space-y-1.5"><label for="proxy-label" class="block text-xs text-slate-400">Label</label><Input id="proxy-label" bind:value={proxyLabel} placeholder="Free proxy 1" /></div>
-        <div class="space-y-1.5"><label for="proxy-urls" class="block text-xs text-slate-400">Proxy URL (satu per baris)</label><textarea id="proxy-urls" bind:value={proxyUrl} rows="2" class="min-h-9 w-full resize-y rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-400" placeholder="http://host:port&#10;http://host:port"></textarea></div>
+      <p class="mt-2 text-xs leading-5 text-slate-500">Gunakan Direct Connection Webshare. Credential disimpan terenkripsi di backend dan tidak pernah ditampilkan kembali.</p>
+      <form class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6 lg:items-end" on:submit|preventDefault={addProxy}>
+        <div class="space-y-1.5 lg:col-span-2"><label for="proxy-label" class="block text-xs text-slate-400">Label</label><Input id="proxy-label" bind:value={proxyLabel} placeholder="Webshare residential" /></div>
+        <div class="space-y-1.5"><label for="proxy-protocol" class="block text-xs text-slate-400">Protocol</label><select id="proxy-protocol" bind:value={proxyProtocol} class="h-9 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-xs text-slate-200 outline-none focus:border-cyan-400"><option value="http">HTTP</option><option value="https">HTTPS</option><option value="socks5">SOCKS5</option></select></div>
+        <div class="space-y-1.5 lg:col-span-2"><label for="proxy-host" class="block text-xs text-slate-400">Proxy host / address</label><Input id="proxy-host" bind:value={proxyHost} placeholder="p.webshare.io atau 1.2.3.4" /></div>
+        <div class="space-y-1.5"><label for="proxy-port" class="block text-xs text-slate-400">Port</label><Input id="proxy-port" bind:value={proxyPort} inputmode="numeric" placeholder="80 / 8168" /></div>
+        <div class="space-y-1.5 lg:col-span-3"><label for="proxy-username" class="block text-xs text-slate-400">Username</label><Input id="proxy-username" bind:value={proxyUsername} placeholder="Webshare username" /></div>
+        <div class="space-y-1.5 lg:col-span-2"><label for="proxy-password" class="block text-xs text-slate-400">Password</label><Input id="proxy-password" bind:value={proxyPassword} type="password" placeholder="Webshare password" /></div>
         <Button type="submit" disabled={proxySaving}><Plus size={15} />{proxySaving ? 'Saving...' : 'Add proxy'}</Button>
       </form>
-      <p class="mt-3 text-[11px] text-amber-300/80">Free proxy sering timeout atau sudah diblokir. Test satu per satu sebelum mengaktifkan.</p>
+      <p class="mt-3 text-[11px] text-amber-300/80">Webshare Direct: isi host dan port dari Proxy List, lalu username dan password Webshare. Test proxy sebelum menjalankan research.</p>
     </Card>
     <Card>
       <div class="border-b border-slate-800 px-5 py-4"><h2 class="text-sm font-medium">Configured proxies</h2><p class="mt-1 text-xs text-slate-500">Proxy aktif akan digunakan untuk research berikutnya.</p></div>
