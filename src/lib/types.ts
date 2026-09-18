@@ -69,7 +69,7 @@ export interface KeywordOpportunity {
   source: string;
   isSeed: boolean;
   researchStatus: 'directly_researched' | 'discovered';
-  scoreStatus: 'scored' | 'provisional' | 'insufficient_data' | 'not_directly_researched';
+  scoreStatus: 'scored' | 'provisional' | 'discovery' | 'insufficient_data' | 'not_directly_researched';
   rank: number | null;
   score: number | null;
   level: 0 | 1 | 2 | 3 | 4 | 5;
