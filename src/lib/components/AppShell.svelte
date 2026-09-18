@@ -3,7 +3,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { api } from '$lib/api';
+  import { ApiError, api } from '$lib/api';
   import { clerkConfigured, loadClerk } from '$lib/clerk';
   import { cn } from '$lib/utils';
   let backendStatus: 'checking' | 'online' | 'offline' = 'checking';
@@ -18,14 +18,33 @@
       if (!clerkConfigured()) { signedIn = true; authReady = true; return; }
       const clerk = await loadClerk();
       if (!clerk) { authReady = true; return; }
-      const syncAuth = () => {
+      const syncAuth = async () => {
+        if (clerk.user) {
+          try {
+            // Clerk can still expose a cached user while the backend rejects
+            // its old/invalid session token. Validate both sides before
+            // showing the authenticated application shell.
+            await api.getAuthMe();
+          } catch (error) {
+            if (error instanceof ApiError && error.status === 401) {
+              await clerk.signOut();
+              signedIn = false;
+              authReady = true;
+              if (!page.url.pathname.startsWith('/sign-in')) {
+                void goto('/sign-in?reason=session-expired');
+              }
+              return;
+            }
+          }
+        }
+
         signedIn = Boolean(clerk.user);
         authReady = true;
         if (!signedIn && !page.url.pathname.startsWith('/sign-in')) void goto('/sign-in');
         if (signedIn && page.url.pathname.startsWith('/sign-in')) void goto('/');
       };
-      unsubscribe = clerk.addListener(syncAuth);
-      syncAuth();
+      unsubscribe = clerk.addListener(() => { void syncAuth(); });
+      void syncAuth();
       if (userButtonNode && clerk.user) { clerk.mountUserButton(userButtonNode); unmountUserButton = () => clerk.unmountUserButton(userButtonNode); }
     })();
     return () => { unsubscribe(); unmountUserButton(); };

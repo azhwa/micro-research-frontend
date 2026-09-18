@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { Layers3, LockKeyhole } from '@lucide/svelte';
   import Card from '$lib/components/ui/Card.svelte';
+  import { ApiError, api } from '$lib/api';
   import { loadClerk, clerkConfigured } from '$lib/clerk';
 
   let signInNode: HTMLDivElement;
@@ -16,7 +17,17 @@
       try {
         const clerk = await loadClerk();
         if (!clerk) throw new Error('Clerk tidak tersedia');
-        if (clerk.user) { await goto('/'); return; }
+        if (clerk.user) {
+          try {
+            await api.getAuthMe();
+            await goto('/');
+            return;
+          } catch (err) {
+            if (!(err instanceof ApiError && err.status === 401)) throw err;
+            // Clear a stale Clerk session so the user can authenticate again.
+            await clerk.signOut();
+          }
+        }
         clerk.mountSignIn(signInNode, { signUpUrl: '/sign-in' });
         unmount = () => clerk.unmountSignIn(signInNode);
       } catch (err) { error = err instanceof Error ? err.message : 'Sign in tidak dapat dimuat'; }

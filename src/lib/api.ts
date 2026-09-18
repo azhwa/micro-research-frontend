@@ -4,6 +4,13 @@ import { getClerkToken } from './clerk';
 
 const API_BASE = (env.PUBLIC_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = await getClerkToken();
   const headers = new Headers(init?.headers);
@@ -17,7 +24,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(payload?.message ?? payload?.error ?? `Request gagal (${response.status})`);
+    throw new ApiError(
+      payload?.message ?? payload?.error ?? `Request gagal (${response.status})`,
+      response.status
+    );
   }
   return payload as T;
 }
