@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import type { AiRecommendation, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, PromptGeneration, ProxyEndpoint, ResearchComparison, ResearchDetailLog, ResearchEvent, ResearchKeyword, ResearchResult, ResearchRun, ResearchSummary, RunCreated, SeedDiscoveryJob } from './types';
+import type { AiRecommendation, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, PromptGeneration, ProxyEndpoint, ResearchComparison, ResearchDetailLog, ResearchEvent, ResearchKeyword, ResearchQueueItem, ResearchResult, ResearchRun, ResearchSummary, RunCreated, SavedPrompt, SeedDiscoveryJob } from './types';
 
 const API_BASE = (env.PUBLIC_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
@@ -37,6 +37,10 @@ export const api = {
   logout: () => request<{ loggedOut: boolean }>('/api/auth/logout', { method: 'POST', body: JSON.stringify({}) }),
   getAuthMe: () => request<AuthMe>('/api/auth/me'),
   listRuns: (limit = 20) => request<ResearchRun[]>(`/api/research-runs?limit=${limit}`),
+  listResearchQueue: (limit = 100) => request<ResearchQueueItem[]>(`/api/research-queue?limit=${limit}`),
+  queueResearch: (body: { keyword: string; category?: string; assetType?: 'images' | 'videos'; locale?: string }) => request<ResearchQueueItem>('/api/research-queue', { method: 'POST', body: JSON.stringify(body) }),
+  startResearchQueue: (id: string) => request<{ item: ResearchQueueItem | null; run: RunCreated | null }>(`/api/research-queue/${id}/start`, { method: 'POST', body: JSON.stringify({}) }),
+  deleteResearchQueue: (id: string) => request<{ deleted: boolean; queueId: string }>(`/api/research-queue/${id}`, { method: 'DELETE' }),
   getRun: (id: string) => request<ResearchRun>(`/api/research-runs/${id}`),
   deleteResearchRun: (id: string) => request<{ deleted: boolean; researchRunId: string; orphanedAssets: number }>(`/api/research-runs/${id}`, { method: 'DELETE' }),
   getResults: (id: string, limit = 1000) => request<ResearchResult[]>(`/api/research-runs/${id}/results?limit=${limit}`),
@@ -67,6 +71,22 @@ export const api = {
   getSeedDiscoveryJob: (id: string) => request<SeedDiscoveryJob>(`/api/seed-discovery/${id}`),
   cancelSeedDiscoveryJob: (id: string) => request<SeedDiscoveryJob>(`/api/seed-discovery/${id}/cancel`, { method: 'POST', body: JSON.stringify({}) }),
   generatePrompts: (body: { seed: string; researchRunId?: string; category?: string; assetType?: string; locale?: string; count?: number; style?: string; model?: string }) => request<{ generation: PromptGeneration; context: Record<string, unknown> }>('/api/prompt-generations', { method: 'POST', body: JSON.stringify(body) }),
+  listSavedPrompts: (limit = 100) => request<SavedPrompt[]>(`/api/prompts?limit=${limit}`),
+  deleteSavedPrompt: (id: string) => request<{ deleted: boolean; promptId: string }>(`/api/prompts/${id}`, { method: 'DELETE' }),
+  downloadPromptExport: async (format: 'csv' | 'txt'): Promise<void> => {
+    const response = await fetch(`${API_BASE}/api/prompts/export.${format}`, { credentials: 'include' });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new ApiError(payload?.message ?? payload?.error ?? `Export gagal (${response.status})`, response.status);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `stockscope-prompts.${format}`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  },
   getComparison: (firstRunId: string, secondRunId: string, limit = 100) => request<ResearchComparison>(`/api/research-comparisons?firstRunId=${encodeURIComponent(firstRunId)}&secondRunId=${encodeURIComponent(secondRunId)}&limit=${limit}`),
   getMonitoring: () => request<MonitoringSnapshot>('/api/monitoring'),
   listGeminiKeys: () => request<GeminiApiKey[]>('/api/gemini/keys'),

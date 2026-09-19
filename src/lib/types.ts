@@ -53,6 +53,26 @@ export interface ResearchKeyword {
 
 export interface RunCreated { id: string; jobId: string; status: RunStatus; }
 
+export type ResearchQueueStatus = 'queued' | 'starting' | 'started';
+
+export interface ResearchQueueItem {
+  id: string;
+  seedKeyword: string;
+  category: string;
+  assetType: AssetType;
+  locale: string;
+  mode: 'full';
+  maxSuggestions: number;
+  assetsPerQuery: number;
+  autocompleteEnabled: boolean;
+  status: ResearchQueueStatus;
+  researchRunId: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  updatedAt: string;
+}
+
 export interface ResearchEvent {
   id: string;
   researchRunId: string;
@@ -364,10 +384,27 @@ export interface GeneratedImagePrompt {
   title: string;
   prompt: string;
   negativePrompt: string;
-  aspectRatio: string;
   keywordFocus: string[];
   commercialRationale: string;
   confidence: 'low' | 'medium' | 'high';
+}
+
+export interface SavedPrompt {
+  id: string;
+  generationId: string | null;
+  seed: string;
+  category: string;
+  assetType: AssetType;
+  locale: string;
+  title: string;
+  prompt: string;
+  negativePrompt: string;
+  keywordFocus: string[];
+  commercialRationale: string;
+  confidence: 'low' | 'medium' | 'high' | string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PromptGenerationResponse {

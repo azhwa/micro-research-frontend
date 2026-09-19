@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Activity, BarChart3, Compass, Database, FlaskConical, GitCompare, Layers3, LogOut, Moon, Search, Settings, Sun } from '@lucide/svelte';
+  import { Activity, BarChart3, Compass, Database, FlaskConical, GitCompare, Layers3, List, LogOut, Moon, Search, Settings, Sparkles, Sun } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -14,6 +14,8 @@
   const navigation = [
     { href: '/', label: 'Overview', icon: BarChart3 },
     { href: '/discover', label: 'Discover ideas', icon: Compass },
+    { href: '/prompts', label: 'Prompt Studio', icon: Sparkles },
+    { href: '/research-queue', label: 'Research queue', icon: List },
     { href: '/insights', label: 'Global insights', icon: BarChart3 },
     { href: '/compare', label: 'Compare runs', icon: GitCompare },
     { href: '/monitoring', label: 'Monitoring', icon: Activity },
