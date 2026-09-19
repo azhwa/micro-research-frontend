@@ -359,3 +359,33 @@ export interface SeedDiscoveryJob {
   updatedAt: string;
   candidates: SeedDiscoveryCandidate[];
 }
+
+export interface GeneratedImagePrompt {
+  title: string;
+  prompt: string;
+  negativePrompt: string;
+  aspectRatio: string;
+  keywordFocus: string[];
+  commercialRationale: string;
+  confidence: 'low' | 'medium' | 'high';
+}
+
+export interface PromptGenerationResponse {
+  summary: string;
+  prompts: GeneratedImagePrompt[];
+  cautions: string[];
+}
+
+export interface PromptGeneration {
+  id: string;
+  scope: 'prompt';
+  promptVersion: string;
+  model: string | null;
+  inputHash: string;
+  status: string;
+  response: PromptGenerationResponse | null;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+}

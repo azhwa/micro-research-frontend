@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import type { AiRecommendation, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, ProxyEndpoint, ResearchComparison, ResearchDetailLog, ResearchEvent, ResearchKeyword, ResearchResult, ResearchRun, ResearchSummary, RunCreated, SeedDiscoveryJob } from './types';
+import type { AiRecommendation, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, PromptGeneration, ProxyEndpoint, ResearchComparison, ResearchDetailLog, ResearchEvent, ResearchKeyword, ResearchResult, ResearchRun, ResearchSummary, RunCreated, SeedDiscoveryJob } from './types';
 
 const API_BASE = (env.PUBLIC_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
@@ -66,6 +66,7 @@ export const api = {
   listSeedDiscoveryJobs: (limit = 20) => request<SeedDiscoveryJob[]>(`/api/seed-discovery?limit=${limit}`),
   getSeedDiscoveryJob: (id: string) => request<SeedDiscoveryJob>(`/api/seed-discovery/${id}`),
   cancelSeedDiscoveryJob: (id: string) => request<SeedDiscoveryJob>(`/api/seed-discovery/${id}/cancel`, { method: 'POST', body: JSON.stringify({}) }),
+  generatePrompts: (body: { seed: string; researchRunId?: string; category?: string; assetType?: string; locale?: string; count?: number; style?: string; model?: string }) => request<{ generation: PromptGeneration; context: Record<string, unknown> }>('/api/prompt-generations', { method: 'POST', body: JSON.stringify(body) }),
   getComparison: (firstRunId: string, secondRunId: string, limit = 100) => request<ResearchComparison>(`/api/research-comparisons?firstRunId=${encodeURIComponent(firstRunId)}&secondRunId=${encodeURIComponent(secondRunId)}&limit=${limit}`),
   getMonitoring: () => request<MonitoringSnapshot>('/api/monitoring'),
   listGeminiKeys: () => request<GeminiApiKey[]>('/api/gemini/keys'),

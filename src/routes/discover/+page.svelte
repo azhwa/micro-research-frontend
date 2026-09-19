@@ -1,13 +1,13 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { ArrowRight, Check, Compass, Image, Lightbulb, LoaderCircle, Sparkles, Video, X } from '@lucide/svelte';
+  import { ArrowRight, Check, Compass, Copy, Image, Lightbulb, LoaderCircle, Sparkles, Video, X } from '@lucide/svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Card from '$lib/components/ui/Card.svelte';
   import Input from '$lib/components/ui/Input.svelte';
   import { api } from '$lib/api';
   import { seedPacks } from '$lib/seed-library';
-  import type { AssetType, ResearchMode, ResearchRun, SeedDiscoveryJob } from '$lib/types';
+  import type { AssetType, PromptGeneration, ResearchMode, ResearchRun, SeedDiscoveryJob } from '$lib/types';
 
   let topic = '';
   let category = 'business';
@@ -23,6 +23,14 @@
   let error = '';
   let selectedSeeds: string[] = [];
   let pollTimer: ReturnType<typeof setInterval> | undefined;
+  let promptGeneration: PromptGeneration | null = null;
+  let promptSeed = '';
+  let promptCount = 5;
+  let promptStyle = 'commercial stock photography';
+  let promptLoading = false;
+  let promptError = '';
+  let copiedPrompt = '';
+  let copyTimer: ReturnType<typeof setTimeout> | undefined;
 
   $: pack = seedPacks.find((item) => item.id === category) ?? seedPacks[0];
   $: isActive = discovery && ['pending', 'running'].includes(discovery.status);
@@ -61,6 +69,31 @@
     window.location.href = `/research/new?keyword=${encodeURIComponent(seed)}&category=${encodeURIComponent(category)}`;
   }
 
+  async function generatePrompts(seed: string) {
+    promptLoading = true;
+    promptError = '';
+    promptSeed = seed;
+    try {
+      const result = await api.generatePrompts({ seed, category, assetType, locale, count: promptCount, style: promptStyle });
+      promptGeneration = result.generation;
+    } catch (err) {
+      promptError = err instanceof Error ? err.message : 'Prompt generation gagal';
+    } finally {
+      promptLoading = false;
+    }
+  }
+
+  async function copyPrompt(value: string, id: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      copiedPrompt = id;
+      if (copyTimer) clearTimeout(copyTimer);
+      copyTimer = setTimeout(() => { copiedPrompt = ''; }, 1600);
+    } catch {
+      promptError = 'Prompt tidak dapat disalin ke clipboard';
+    }
+  }
+
   async function loadData() {
     loadingHistory = true;
     try { [previousJobs, recentRuns] = await Promise.all([api.listSeedDiscoveryJobs(8), api.listRuns(50)]); }
@@ -69,7 +102,7 @@
   }
 
   onMount(loadData);
-  onDestroy(() => { if (pollTimer) clearInterval(pollTimer); });
+  onDestroy(() => { if (pollTimer) clearInterval(pollTimer); if (copyTimer) clearTimeout(copyTimer); });
 </script>
 
 <svelte:head><title>Discover ideas | StockScope</title></svelte:head>
@@ -97,7 +130,8 @@
           <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><div class="flex items-center gap-2"><h2 class="text-base font-bold">{discovery.topic || pack.label}</h2><Badge tone={discovery.status === 'completed' ? 'success' : discovery.status === 'failed' ? 'danger' : discovery.status === 'cancelled' ? 'muted' : 'warning'}>{discovery.status}</Badge></div><p class="mt-1 text-xs text-[#77736b]">{discovery.summary || 'Menganalisis global insights dan menyusun seed kandidat...'}</p></div>{#if isActive}<Button variant="ghost" size="sm" on:click={cancelDiscovery}><X size={14} /> Cancel</Button>{/if}</div>
           {#if isActive}<div class="mt-5"><div class="flex justify-between text-xs text-[#77736b]"><span>Preparing candidates</span><span>{discovery.progressCompleted}/{discovery.progressTotal || 1}</span></div><div class="mt-2 h-2 overflow-hidden rounded-full bg-[#efede7]"><div class="h-full rounded-full bg-[#d75a3b] transition-all" style={`width:${Math.max(8, Math.min(100, (discovery.progressCompleted / Math.max(discovery.progressTotal, 1)) * 100))}%`}></div></div></div>{/if}
           {#if discovery.errorMessage}<div class="mt-4 rounded-md border border-[#b94035]/25 bg-[#fff0ee] p-3 text-sm text-[#a3372f]">{discovery.errorMessage}</div>{/if}
-          {#if discovery.candidates.length}<div class="mt-5 grid gap-3 sm:grid-cols-2">{#each discovery.candidates as candidate}<article class={`rounded-lg border p-4 transition ${selectedSeeds.includes(candidate.keyword) ? 'border-[#d75a3b] bg-[#fff8f4]' : 'border-[#e4e0d7] bg-[#fffdfa] hover:border-[#cfcac0]'}`}><div class="flex items-start justify-between gap-3"><div><p class="text-sm font-bold text-[#3f3c37]">{candidate.keyword}</p><p class="mt-1 text-[11px] text-[#8d897f]">{candidate.source.replace('_', ' ')} · {candidate.confidence} confidence</p></div><span class="font-mono text-sm font-bold text-[#a74630]">{candidate.opportunityScore ?? '--'}</span></div><p class="mt-3 text-xs leading-5 text-[#6d6a63]">{candidate.rationale}</p><div class="mt-3 flex flex-wrap gap-1.5">{#each candidate.evidenceKeywords.slice(0, 3) as evidence}<span class="rounded bg-[#f1eee8] px-2 py-1 text-[10px] text-[#77736b]">{evidence}</span>{/each}</div><div class="mt-4 flex gap-2"><Button size="sm" variant={selectedSeeds.includes(candidate.keyword) ? 'default' : 'outline'} on:click={() => toggleSeed(candidate.keyword)}>{#if selectedSeeds.includes(candidate.keyword)}<Check size={13} /> Selected{:else}Queue seed{/if}</Button><Button size="sm" variant="ghost" on:click={() => beginResearch(candidate.keyword)}>Research <ArrowRight size={13} /></Button></div></article>{/each}</div>{/if}
+          {#if discovery.candidates.length}<div class="mt-5 grid gap-3 sm:grid-cols-2">{#each discovery.candidates as candidate}<article class={`rounded-lg border p-4 transition ${selectedSeeds.includes(candidate.keyword) ? 'border-[#d75a3b] bg-[#fff8f4]' : 'border-[#e4e0d7] bg-[#fffdfa] hover:border-[#cfcac0]'}`}><div class="flex items-start justify-between gap-3"><div><p class="text-sm font-bold text-[#3f3c37]">{candidate.keyword}</p><p class="mt-1 text-[11px] text-[#8d897f]">{candidate.source.replace('_', ' ')} · {candidate.confidence} confidence</p></div><span class="font-mono text-sm font-bold text-[#a74630]">{candidate.opportunityScore ?? '--'}</span></div><p class="mt-3 text-xs leading-5 text-[#6d6a63]">{candidate.rationale}</p><div class="mt-3 flex flex-wrap gap-1.5">{#each candidate.evidenceKeywords.slice(0, 3) as evidence}<span class="rounded bg-[#f1eee8] px-2 py-1 text-[10px] text-[#77736b]">{evidence}</span>{/each}</div><div class="mt-4 flex flex-wrap gap-2"><Button size="sm" variant={selectedSeeds.includes(candidate.keyword) ? 'default' : 'outline'} on:click={() => toggleSeed(candidate.keyword)}>{#if selectedSeeds.includes(candidate.keyword)}<Check size={13} /> Selected{:else}Queue seed{/if}</Button><Button size="sm" variant="ghost" on:click={() => beginResearch(candidate.keyword)}>Research <ArrowRight size={13} /></Button><Button size="sm" variant="ghost" on:click={() => generatePrompts(candidate.keyword)}><Sparkles size={13} /> Prompts</Button></div></article>{/each}</div>{/if}
+          {#if promptLoading || promptGeneration || promptError}<div class="mt-6 border-t border-[#e8e3da] pt-5"><div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p class="eyebrow">Prompt studio</p><h2 class="mt-1 text-base font-bold">Prompts for “{promptSeed}”</h2><p class="mt-1 text-xs text-[#77736b]">AI memakai keyword scoring, asset evidence, kategori, dan format yang dipilih.</p></div><div class="flex flex-wrap gap-2"><select aria-label="Prompt count" bind:value={promptCount} class="h-9 rounded-md border border-[#cfcac0] bg-[#fffdfa] px-2 text-xs text-[#3f3c37]"><option value={3}>3 prompts</option><option value={5}>5 prompts</option><option value={10}>10 prompts</option><option value={20}>20 prompts</option></select><select aria-label="Prompt style" bind:value={promptStyle} class="h-9 rounded-md border border-[#cfcac0] bg-[#fffdfa] px-2 text-xs text-[#3f3c37]"><option value="commercial stock photography">Commercial photo</option><option value="clean stock illustration">Stock illustration</option><option value="editorial lifestyle concept">Lifestyle concept</option></select><Button size="sm" variant="outline" on:click={() => generatePrompts(promptSeed)} disabled={promptLoading}>{promptLoading ? 'Generating…' : 'Regenerate'}</Button></div></div>{#if promptError}<div class="mt-4 rounded-md border border-[#b94035]/25 bg-[#fff0ee] p-3 text-sm text-[#a3372f]">{promptError}</div>{:else if promptLoading}<div class="mt-4 rounded-md bg-[#f7f5f0] p-5 text-sm text-[#77736b]">Menyusun prompt berdasarkan evidence research…</div>{:else if promptGeneration?.response}<div class="mt-4"><p class="text-sm text-[#6d6a63]">{promptGeneration.response.summary}</p><div class="mt-4 grid gap-3 lg:grid-cols-2">{#each promptGeneration.response.prompts as item, index}<article class="rounded-lg border border-[#e4e0d7] bg-[#fffdfa] p-4"><div class="flex items-start justify-between gap-3"><div><p class="text-sm font-bold text-[#3f3c37]">{index + 1}. {item.title}</p><p class="mt-1 text-[11px] text-[#8d897f]">{item.aspectRatio} · {item.confidence} confidence</p></div><Button size="icon" variant="ghost" ariaLabel="Copy prompt" on:click={() => copyPrompt(item.prompt, `${promptGeneration?.id}-${index}`)}><Copy size={14} /></Button></div><p class="mt-3 rounded-md bg-[#f7f5f0] p-3 text-xs leading-5 text-[#3f3c37]">{item.prompt}</p><p class="mt-2 text-[11px] text-[#77736b]"><span class="font-semibold">Negative:</span> {item.negativePrompt}</p><p class="mt-2 text-[11px] text-[#9a958b]">{item.keywordFocus.join(' · ')}</p><p class="mt-3 text-xs leading-5 text-[#6d6a63]">{item.commercialRationale}</p>{#if copiedPrompt === `${promptGeneration?.id}-${index}`}<p class="mt-2 text-[11px] font-semibold text-[#39704a]">Prompt disalin</p>{/if}</article>{/each}</div>{#if promptGeneration.response.cautions.length}<p class="mt-4 text-[11px] leading-5 text-[#9a958b]">Catatan: {promptGeneration.response.cautions.join(' ')}</p>{/if}</div>{/if}</div>{/if}
           {#if selectedSeeds.length}<div class="mt-5 flex flex-col gap-3 border-t border-[#e8e3da] pt-4 sm:flex-row sm:items-center sm:justify-between"><p class="text-xs text-[#6d6a63]"><span class="font-bold text-[#242322]">{selectedSeeds.length}</span> seed queued for research</p><Button on:click={() => beginResearch(selectedSeeds[0])}>Start with {selectedSeeds[0]} <ArrowRight size={14} /></Button></div>{/if}
         </div>
       {/if}
