@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Activity, BarChart3, Compass, Database, FlaskConical, GitCompare, Layers3, LogOut, Search, Settings } from '@lucide/svelte';
+  import { Activity, BarChart3, Compass, Database, FlaskConical, GitCompare, Layers3, LogOut, Moon, Search, Settings, Sun } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -9,6 +9,7 @@
   let backendStatus: 'checking' | 'online' | 'offline' = 'checking';
   let authReady = false;
   let signedIn = false;
+  let theme: 'light' | 'dark' = 'light';
 
   const navigation = [
     { href: '/', label: 'Overview', icon: BarChart3 },
@@ -25,7 +26,22 @@
     await goto('/sign-in');
   }
 
+  function applyTheme(nextTheme: 'light' | 'dark'): void {
+    theme = nextTheme;
+    document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+    localStorage.setItem('stockscope-theme', nextTheme);
+  }
+
+  function toggleTheme(): void {
+    applyTheme(theme === 'light' ? 'dark' : 'light');
+  }
+
   onMount(() => {
+    const savedTheme = localStorage.getItem('stockscope-theme');
+    const preferredTheme = savedTheme === 'dark' || savedTheme === 'light'
+      ? savedTheme
+      : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    applyTheme(preferredTheme);
     void (async () => {
       try { await api.getHealth(); backendStatus = 'online'; } catch { backendStatus = 'offline'; }
       try {
@@ -56,7 +72,7 @@
         <span class="text-[15px] font-bold tracking-tight">Stock<span class="text-[#d75a3b]">Scope</span></span>
         <span class="hidden rounded border border-[#d6d1c7] px-1.5 py-0.5 text-[10px] font-semibold text-[#8d897f] sm:inline">PRIVATE LAB</span>
       </a>
-      <div class="flex items-center gap-3 text-xs text-[#77736b]"><span class={`h-2 w-2 rounded-full ${backendStatus === 'online' ? 'bg-[#5a9b6c]' : backendStatus === 'offline' ? 'bg-[#b94035]' : 'bg-[#d29b45]'}`}></span><span class="hidden sm:inline">{backendStatus === 'online' ? 'Backend online' : backendStatus === 'offline' ? 'Backend offline' : 'Checking backend'}</span><button type="button" on:click={() => void handleLogout()} aria-label="Logout" title="Logout" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#d6d1c7] bg-[#fffdfa] px-2.5 text-xs font-semibold text-[#6d6a63] transition-colors hover:border-[#b94035]/40 hover:bg-[#fff0ee] hover:text-[#a3372f]"><LogOut size={14} /><span class="hidden sm:inline">Logout</span></button></div>
+      <div class="flex items-center gap-3 text-xs text-[#77736b]"><span class={`h-2 w-2 rounded-full ${backendStatus === 'online' ? 'bg-[#5a9b6c]' : backendStatus === 'offline' ? 'bg-[#b94035]' : 'bg-[#d29b45]'}`}></span><span class="hidden sm:inline">{backendStatus === 'online' ? 'Backend online' : backendStatus === 'offline' ? 'Backend offline' : 'Checking backend'}</span><button type="button" on:click={toggleTheme} aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'} title={theme === 'light' ? 'Dark mode' : 'Light mode'} class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#d6d1c7] bg-[#fffdfa] text-[#6d6a63] transition-colors hover:border-[#d75a3b] hover:bg-[#fff0eb] hover:text-[#a74630]">{#if theme === 'light'}<Moon size={15} />{:else}<Sun size={15} />{/if}</button><button type="button" on:click={() => void handleLogout()} aria-label="Logout" title="Logout" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#d6d1c7] bg-[#fffdfa] px-2.5 text-xs font-semibold text-[#6d6a63] transition-colors hover:border-[#b94035]/40 hover:bg-[#fff0ee] hover:text-[#a3372f]"><LogOut size={14} /><span class="hidden sm:inline">Logout</span></button></div>
     </div>
   </header>
   <nav class="flex gap-1 overflow-x-auto border-b border-[#dedbd3] bg-[#fffdfa] px-4 py-2 lg:hidden">

@@ -57,3 +57,38 @@ button, input, select { font: inherit; }
   .bg-amber-400 { background-color: #d29b45 !important; }
   .bg-red-400, .bg-red-500 { background-color: #b94035 !important; }
 }
+
+html.dark {
+  color-scheme: dark;
+  background: #191817;
+}
+
+html.dark body {
+  background: #191817;
+  color: #f5f1ea;
+}
+
+html.dark .bg-background { background-color: #191817 !important; }
+html.dark [class~="bg-[#f7f5f0]"] { background-color: #191817 !important; }
+html.dark [class~="bg-[#fffdfa]"] { background-color: #242220 !important; }
+html.dark [class~="bg-[#fff8f4]"] { background-color: #2b211e !important; }
+html.dark [class~="bg-[#fff0eb]"] { background-color: #3b2823 !important; }
+html.dark [class~="bg-[#f1eee8]"] { background-color: #302d29 !important; }
+html.dark [class~="bg-[#fcfaf6]"] { background-color: #262421 !important; }
+html.dark [class~="bg-[#efede7]"] { background-color: #312e2a !important; }
+html.dark [class~="text-[#242322]"] { color: #f5f1ea !important; }
+html.dark [class~="text-[#3f3c37]"] { color: #e9e3da !important; }
+html.dark [class~="text-[#6d6a63]"] { color: #b8b0a4 !important; }
+html.dark [class~="text-[#77736b]"] { color: #a79e92 !important; }
+html.dark [class~="text-[#8d897f]"] { color: #9a9185 !important; }
+html.dark [class~="text-[#9a958b]"] { color: #8e867b !important; }
+html.dark [class~="text-[#b2ada3]"] { color: #70685f !important; }
+html.dark [class~="text-[#a74630]"] { color: #f09475 !important; }
+html.dark [class~="border-[#dedbd3]"],
+html.dark [class~="border-[#e8e3da]"],
+html.dark [class~="border-[#e4e0d7]"],
+html.dark [class~="border-[#d6d1c7]"],
+html.dark [class~="border-[#cfcac0]"],
+html.dark [class~="border-[#eadfd8]"] { border-color: #49443d !important; }
+html.dark input, html.dark select { color-scheme: dark; }
+html.dark [class~="placeholder:text-[#99948a]"]::placeholder { color: #8e867b; }
