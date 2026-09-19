@@ -1,64 +1,112 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
-  import { ArrowRight, Check, Image, Lightbulb, Sparkles, Video } from '@lucide/svelte';
+  import { onDestroy, onMount } from 'svelte';
+  import { ArrowRight, Check, Compass, Image, Lightbulb, LoaderCircle, Sparkles, Video, X } from '@lucide/svelte';
+  import Badge from '$lib/components/ui/Badge.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Card from '$lib/components/ui/Card.svelte';
+  import Input from '$lib/components/ui/Input.svelte';
   import { api } from '$lib/api';
-  import { seedPacks, type SeedPack } from '$lib/seed-library';
-  import type { AssetType, ResearchMode, ResearchRun } from '$lib/types';
+  import { seedPacks } from '$lib/seed-library';
+  import type { AssetType, ResearchMode, ResearchRun, SeedDiscoveryJob } from '$lib/types';
 
-  let packId = seedPacks[0].id;
-  let selectedSeeds: string[] = [];
+  let topic = '';
+  let category = 'business';
   let assetType: AssetType = 'images';
   let locale = 'en-GB';
-  let maxSuggestions = 3;
-  let assetsPerQuery = 20;
-  let autocompleteEnabled = true;
+  let count = 10;
   let mode: ResearchMode = 'fast';
+  let discovery: SeedDiscoveryJob | null = null;
+  let previousJobs: SeedDiscoveryJob[] = [];
   let recentRuns: ResearchRun[] = [];
-  let submitting = false;
+  let loading = false;
+  let loadingHistory = true;
   let error = '';
-  let message = '';
+  let selectedSeeds: string[] = [];
+  let pollTimer: ReturnType<typeof setInterval> | undefined;
 
-  $: pack = seedPacks.find((item) => item.id === packId) ?? seedPacks[0];
+  $: pack = seedPacks.find((item) => item.id === category) ?? seedPacks[0];
+  $: isActive = discovery && ['pending', 'running'].includes(discovery.status);
   $: researched = new Set(recentRuns.map((run) => run.seedKeyword.toLowerCase()));
 
-  function toggleSeed(seed: string) {
-    if (selectedSeeds.includes(seed)) selectedSeeds = selectedSeeds.filter((item) => item !== seed);
-    else if (selectedSeeds.length < 3) selectedSeeds = [...selectedSeeds, seed];
+  function startPolling(id: string) {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      try {
+        discovery = await api.getSeedDiscoveryJob(id);
+        if (!['pending', 'running'].includes(discovery.status) && pollTimer) { clearInterval(pollTimer); pollTimer = undefined; }
+      } catch (err) { error = err instanceof Error ? err.message : 'Status discovery tidak dapat dimuat'; }
+    }, 3000);
   }
 
-  async function launch() {
-    if (!selectedSeeds.length) { error = 'Pilih minimal satu seed keyword.'; return; }
-    submitting = true; error = ''; message = '';
+  async function discoverSeeds() {
+    loading = true; error = ''; selectedSeeds = [];
     try {
-      const created: string[] = [];
-      for (const seed of selectedSeeds) {
-        const run = await api.createRun({ keyword: seed, category: pack.id, assetType, locale, maxSuggestions, assetsPerQuery, autocompleteEnabled, mode });
-        created.push(run.id);
-      }
-      message = `${created.length} research berhasil dibuat.`;
-      await goto(`/research/${created[0]}`);
-    } catch (err) { error = err instanceof Error ? err.message : 'Research tidak dapat dibuat'; }
-    finally { submitting = false; }
+      discovery = await api.createSeedDiscovery({ topic: topic.trim() || undefined, category, assetType, locale, count });
+      startPolling(discovery.id);
+    } catch (err) { error = err instanceof Error ? err.message : 'Seed discovery gagal dibuat'; }
+    finally { loading = false; }
   }
 
-  async function loadRecent() { try { recentRuns = await api.listRuns(50); } catch { /* optional */ } }
-  function changePack(next: string) { packId = next; selectedSeeds = []; }
-  onMount(loadRecent);
+  async function cancelDiscovery() {
+    if (!discovery) return;
+    try { discovery = await api.cancelSeedDiscoveryJob(discovery.id); if (pollTimer) clearInterval(pollTimer); pollTimer = undefined; }
+    catch (err) { error = err instanceof Error ? err.message : 'Discovery tidak dapat dibatalkan'; }
+  }
+
+  function toggleSeed(seed: string) {
+    selectedSeeds = selectedSeeds.includes(seed) ? selectedSeeds.filter((item) => item !== seed) : [...selectedSeeds, seed];
+  }
+
+  function beginResearch(seed: string) {
+    window.location.href = `/research/new?keyword=${encodeURIComponent(seed)}&category=${encodeURIComponent(category)}`;
+  }
+
+  async function loadData() {
+    loadingHistory = true;
+    try { [previousJobs, recentRuns] = await Promise.all([api.listSeedDiscoveryJobs(8), api.listRuns(50)]); }
+    catch { /* The active discovery screen remains usable if history is unavailable. */ }
+    finally { loadingHistory = false; }
+  }
+
+  onMount(loadData);
+  onDestroy(() => { if (pollTimer) clearInterval(pollTimer); });
 </script>
 
-<svelte:head><title>Discover ideas — StockScope</title></svelte:head>
+<svelte:head><title>Discover ideas | StockScope</title></svelte:head>
 
-<div class="mx-auto max-w-5xl space-y-6">
-  <div><p class="mb-2 text-xs font-medium uppercase tracking-widest text-cyan-400">Seed discovery</p><h1 class="text-2xl font-semibold tracking-tight">Start with an idea</h1><p class="mt-1 max-w-2xl text-sm text-slate-500">Pilih area konten. StockScope memberikan kandidat seed keyword agar Anda tidak memulai dari halaman kosong.</p></div>
-  <div class="grid gap-5 lg:grid-cols-[240px_1fr]">
-    <Card className="h-fit p-3"><p class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-slate-600">Categories</p><div class="space-y-1">{#each seedPacks as item}<button class={`w-full rounded-md px-3 py-2 text-left text-xs transition-colors ${packId === item.id ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:bg-slate-900 hover:text-slate-300'}`} on:click={() => changePack(item.id)}>{item.label}</button>{/each}</div></Card>
-    <div class="space-y-5"><Card className="p-5"><div class="flex items-start gap-3"><div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-cyan-400/10 text-cyan-300"><Lightbulb size={17} /></div><div><h2 class="text-sm font-medium">{pack.label}</h2><p class="mt-1 text-xs text-slate-500">{pack.description}</p></div></div><div class="mt-5 grid gap-2 sm:grid-cols-2">{#each pack.seeds as seed}<button class={`flex items-center justify-between rounded-md border px-3 py-2.5 text-left text-xs transition-colors ${selectedSeeds.includes(seed) ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-200' : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:text-slate-200'}`} on:click={() => toggleSeed(seed)}><span>{seed}</span>{#if selectedSeeds.includes(seed)}<Check size={14} class="text-cyan-300" />{:else if researched.has(seed)}<span class="text-[10px] text-slate-600">researched</span>{/if}</button>{/each}</div><p class="mt-3 text-[11px] text-slate-600">Pilih maksimal 3 seed. Adobe autocomplete akan memperluas setiap seed saat research berjalan.</p></Card>
-      <Card className="p-5"><div class="mb-4 flex items-center gap-2"><Sparkles size={15} class="text-cyan-400" /><h2 class="text-sm font-medium">Research settings</h2></div><div class="grid gap-4 sm:grid-cols-2"><div class="space-y-2"><p class="text-xs font-medium text-slate-400">Asset type</p><div class="flex gap-2"><button class={`inline-flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-xs ${assetType === 'images' ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 text-slate-500'}`} on:click={() => assetType = 'images'}><Image size={14} /> Images</button><button class={`inline-flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-xs ${assetType === 'videos' ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 text-slate-500'}`} on:click={() => assetType = 'videos'}><Video size={14} /> Videos</button></div></div><div class="space-y-2"><label for="discover-locale" class="text-xs font-medium text-slate-400">Locale</label><select id="discover-locale" bind:value={locale} class="flex h-9 w-full rounded-md border border-slate-700 bg-slate-950 px-2 text-xs text-slate-300 outline-none focus:border-cyan-400"><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="id-ID">Indonesian</option></select></div><div class="space-y-2"><label for="discover-suggestions" class="text-xs font-medium text-slate-400">Max suggestions</label><input id="discover-suggestions" type="number" min="1" max="50" bind:value={maxSuggestions} class="flex h-9 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-xs text-slate-200 outline-none focus:border-cyan-400" /></div><div class="space-y-2"><label for="discover-assets" class="text-xs font-medium text-slate-400">Assets per query</label><input id="discover-assets" type="number" min="1" max="100" bind:value={assetsPerQuery} class="flex h-9 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-xs text-slate-200 outline-none focus:border-cyan-400" /></div></div>{#if error}<div class="mt-4 rounded-md border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-300">{error}</div>{/if}{#if message}<div class="mt-4 rounded-md border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-300">{message}</div>{/if}<div class="mt-5 flex items-center justify-between border-t border-slate-800 pt-4"><p class="text-xs text-slate-500">{selectedSeeds.length}/3 seeds selected</p><Button on:click={launch} disabled={submitting || !selectedSeeds.length}>{submitting ? 'Creating…' : 'Research selected seeds'} <ArrowRight size={14} /></Button></div></Card>
-      <Card className="p-5"><label class="flex cursor-pointer items-start gap-3"><input type="checkbox" bind:checked={autocompleteEnabled} class="mt-0.5 h-4 w-4 accent-cyan-400" /><span><span class="block text-xs font-medium text-slate-300">Scrape Adobe autocomplete</span><span class="mt-1 block text-[11px] leading-5 text-slate-600">Nonaktifkan untuk melewati halaman suggestion dan memakai seed saja.</span></span></label></Card>
-      <Card className="p-5"><div class="space-y-2"><p class="text-xs font-medium text-slate-400">Research mode</p><div class="grid gap-2 sm:grid-cols-2"><button type="button" class={`rounded-md border p-3 text-left text-xs ${mode === 'fast' ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 text-slate-500'}`} on:click={() => mode = 'fast'}><span class="block font-medium">Fast</span><span class="mt-1 block text-[11px] opacity-70">Downloads only, autocomplete terbatas, keyword detail 1 asset/query.</span></button><button type="button" class={`rounded-md border p-3 text-left text-xs ${mode === 'full' ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 text-slate-500'}`} on:click={() => mode = 'full'}><span class="block font-medium">Full</span><span class="mt-1 block text-[11px] opacity-70">Semua sort mode dan keyword detail lebih lengkap.</span></button></div></div></Card>
+<div class="mx-auto max-w-6xl space-y-7">
+  <section class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+    <div><p class="eyebrow">Seed discovery</p><h1 class="mt-2 text-3xl font-bold tracking-tight text-[#242322]">Find a direction worth researching.</h1><p class="mt-2 max-w-2xl text-sm leading-6 text-[#6d6a63]">Gunakan data keyword dan asset yang sudah terkumpul untuk menemukan seed baru. AI memberi alasan dan evidence, bukan sekadar daftar ide.</p></div>
+    <a href="/research/new"><Button variant="outline"><Compass size={15} /> Research manual</Button></a>
+  </section>
+
+  <div class="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)]">
+    <Card className="overflow-hidden">
+      <div class="border-b border-[#e8e3da] bg-[#fff8f4] p-5 sm:p-6">
+        <div class="flex items-start gap-3"><div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#d75a3b] text-white"><Sparkles size={18} /></div><div><p class="text-xs font-bold uppercase tracking-wider text-[#a74630]">AI seed finder</p><h2 class="mt-1 text-lg font-bold">What should you research next?</h2><p class="mt-1 text-xs leading-5 text-[#7e665f]">Kosongkan topik untuk melihat peluang terbaik dari seluruh global insight Anda.</p></div></div>
+        <form class="mt-6 space-y-5" on:submit|preventDefault={discoverSeeds}>
+          <div class="space-y-2"><label for="seed-topic" class="text-sm font-semibold">Topic or direction <span class="font-normal text-[#9a958b]">optional</span></label><Input id="seed-topic" bind:value={topic} placeholder="e.g. remote work, mindful travel, clean energy" /></div>
+          <div class="grid gap-4 sm:grid-cols-2"><div class="space-y-2"><label for="seed-category" class="text-sm font-semibold">Market category</label><select id="seed-category" bind:value={category} class="h-10 w-full rounded-md border border-[#cfcac0] bg-[#fffdfa] px-3 text-sm text-[#3f3c37] outline-none focus:border-[#d75a3b]">{#each seedPacks as item}<option value={item.id}>{item.label}</option>{/each}</select></div><div class="space-y-2"><label for="seed-count" class="text-sm font-semibold">How many ideas?</label><select id="seed-count" bind:value={count} class="h-10 w-full rounded-md border border-[#cfcac0] bg-[#fffdfa] px-3 text-sm text-[#3f3c37] outline-none focus:border-[#d75a3b]"><option value={5}>5 focused ideas</option><option value={10}>10 balanced ideas</option><option value={20}>20 broad ideas</option><option value={50}>50 research queue</option></select></div></div>
+          <div class="grid gap-4 sm:grid-cols-2"><div class="space-y-2"><p class="text-sm font-semibold">Asset format</p><div class="grid grid-cols-2 gap-2"><button type="button" class={`flex min-h-11 items-center justify-center gap-2 rounded-md border text-xs font-semibold ${assetType === 'images' ? 'border-[#d75a3b] bg-[#fff0eb] text-[#a74630]' : 'border-[#d6d1c7] text-[#77736b] hover:bg-[#f4f2ed]'}`} on:click={() => assetType = 'images'}><Image size={14} /> Images</button><button type="button" class={`flex min-h-11 items-center justify-center gap-2 rounded-md border text-xs font-semibold ${assetType === 'videos' ? 'border-[#d75a3b] bg-[#fff0eb] text-[#a74630]' : 'border-[#d6d1c7] text-[#77736b] hover:bg-[#f4f2ed]'}`} on:click={() => assetType = 'videos'}><Video size={14} /> Videos</button></div></div><div class="space-y-2"><label for="seed-locale" class="text-sm font-semibold">Adobe locale</label><select id="seed-locale" bind:value={locale} class="h-10 w-full rounded-md border border-[#cfcac0] bg-[#fffdfa] px-3 text-sm text-[#3f3c37] outline-none focus:border-[#d75a3b]"><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="id-ID">Indonesian</option></select></div></div>
+          {#if error}<div class="rounded-md border border-[#b94035]/25 bg-[#fff0ee] p-3 text-sm text-[#a3372f]" role="alert">{error}</div>{/if}
+          <div class="flex flex-col gap-3 border-t border-[#e8e3da] pt-5 sm:flex-row sm:items-center sm:justify-between"><p class="text-xs leading-5 text-[#77736b]">1 request akan memakai global scoring, evidence keyword, dan konteks kategori.</p><Button type="submit" disabled={loading || Boolean(isActive)}>{#if loading}<LoaderCircle size={15} class="animate-spin" /> Finding...{:else}<Sparkles size={15} /> Find seed ideas{/if}</Button></div>
+        </form>
+      </div>
+      {#if discovery}
+        <div class="p-5 sm:p-6">
+          <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><div class="flex items-center gap-2"><h2 class="text-base font-bold">{discovery.topic || pack.label}</h2><Badge tone={discovery.status === 'completed' ? 'success' : discovery.status === 'failed' ? 'danger' : discovery.status === 'cancelled' ? 'muted' : 'warning'}>{discovery.status}</Badge></div><p class="mt-1 text-xs text-[#77736b]">{discovery.summary || 'Menganalisis global insights dan menyusun seed kandidat...'}</p></div>{#if isActive}<Button variant="ghost" size="sm" on:click={cancelDiscovery}><X size={14} /> Cancel</Button>{/if}</div>
+          {#if isActive}<div class="mt-5"><div class="flex justify-between text-xs text-[#77736b]"><span>Preparing candidates</span><span>{discovery.progressCompleted}/{discovery.progressTotal || 1}</span></div><div class="mt-2 h-2 overflow-hidden rounded-full bg-[#efede7]"><div class="h-full rounded-full bg-[#d75a3b] transition-all" style={`width:${Math.max(8, Math.min(100, (discovery.progressCompleted / Math.max(discovery.progressTotal, 1)) * 100))}%`}></div></div></div>{/if}
+          {#if discovery.errorMessage}<div class="mt-4 rounded-md border border-[#b94035]/25 bg-[#fff0ee] p-3 text-sm text-[#a3372f]">{discovery.errorMessage}</div>{/if}
+          {#if discovery.candidates.length}<div class="mt-5 grid gap-3 sm:grid-cols-2">{#each discovery.candidates as candidate}<article class={`rounded-lg border p-4 transition ${selectedSeeds.includes(candidate.keyword) ? 'border-[#d75a3b] bg-[#fff8f4]' : 'border-[#e4e0d7] bg-[#fffdfa] hover:border-[#cfcac0]'}`}><div class="flex items-start justify-between gap-3"><div><p class="text-sm font-bold text-[#3f3c37]">{candidate.keyword}</p><p class="mt-1 text-[11px] text-[#8d897f]">{candidate.source.replace('_', ' ')} · {candidate.confidence} confidence</p></div><span class="font-mono text-sm font-bold text-[#a74630]">{candidate.opportunityScore ?? '--'}</span></div><p class="mt-3 text-xs leading-5 text-[#6d6a63]">{candidate.rationale}</p><div class="mt-3 flex flex-wrap gap-1.5">{#each candidate.evidenceKeywords.slice(0, 3) as evidence}<span class="rounded bg-[#f1eee8] px-2 py-1 text-[10px] text-[#77736b]">{evidence}</span>{/each}</div><div class="mt-4 flex gap-2"><Button size="sm" variant={selectedSeeds.includes(candidate.keyword) ? 'default' : 'outline'} on:click={() => toggleSeed(candidate.keyword)}>{#if selectedSeeds.includes(candidate.keyword)}<Check size={13} /> Selected{:else}Queue seed{/if}</Button><Button size="sm" variant="ghost" on:click={() => beginResearch(candidate.keyword)}>Research <ArrowRight size={13} /></Button></div></article>{/each}</div>{/if}
+          {#if selectedSeeds.length}<div class="mt-5 flex flex-col gap-3 border-t border-[#e8e3da] pt-4 sm:flex-row sm:items-center sm:justify-between"><p class="text-xs text-[#6d6a63]"><span class="font-bold text-[#242322]">{selectedSeeds.length}</span> seed queued for research</p><Button on:click={() => beginResearch(selectedSeeds[0])}>Start with {selectedSeeds[0]} <ArrowRight size={14} /></Button></div>{/if}
+        </div>
+      {/if}
+    </Card>
+
+    <div class="space-y-6">
+      <Card className="surface-dotted p-5"><div class="flex items-center gap-2"><Lightbulb size={16} class="text-[#d75a3b]" /><h2 class="text-sm font-bold">How this works</h2></div><ol class="mt-4 space-y-4 text-xs leading-5 text-[#6d6a63]"><li class="flex gap-3"><span class="font-mono text-[#d75a3b]">01</span><span>Ambil evidence dari global keyword scoring yang sudah Anda kumpulkan.</span></li><li class="flex gap-3"><span class="font-mono text-[#d75a3b]">02</span><span>AI mengelompokkan peluang dan memperluas seed yang masih relevan.</span></li><li class="flex gap-3"><span class="font-mono text-[#d75a3b]">03</span><span>Pilih kandidat lalu jalankan research Adobe sebagai validasi.</span></li></ol></Card>
+      <Card className="p-5"><div class="flex items-center justify-between"><div><p class="eyebrow">Manual ideas</p><h2 class="mt-1 text-sm font-bold">{pack.label}</h2></div><span class="text-xs text-[#9a958b]">fallback</span></div><p class="mt-2 text-xs leading-5 text-[#77736b]">Gunakan seed starter ini saat global context belum cukup untuk AI discovery.</p><div class="mt-4 space-y-1.5">{#each pack.seeds.slice(0, 5) as seed}<button type="button" on:click={() => beginResearch(seed)} class="flex min-h-10 w-full items-center justify-between rounded-md border border-[#e4e0d7] px-3 text-left text-xs font-medium text-[#6d6a63] hover:border-[#d75a3b] hover:bg-[#fff8f4]"><span>{seed}</span>{#if researched.has(seed.toLowerCase())}<span class="text-[10px] text-[#5a9b6c]">researched</span>{/if}</button>{/each}</div></Card>
+      <Card className="p-5"><p class="eyebrow">Recent discovery</p>{#if loadingHistory}<p class="mt-3 text-xs text-[#9a958b]">Loading history...</p>{:else if !previousJobs.length}<p class="mt-3 text-xs leading-5 text-[#77736b]">Belum ada sesi discovery. Hasil pertama akan muncul di sini.</p>{:else}<div class="mt-3 space-y-3">{#each previousJobs.slice(0, 4) as job}<button type="button" class="w-full text-left" on:click={() => { discovery = job; if (['pending', 'running'].includes(job.status)) startPolling(job.id); }}><div class="flex items-center justify-between gap-2"><span class="truncate text-xs font-semibold text-[#3f3c37]">{job.topic || job.category}</span><Badge tone={job.status === 'completed' ? 'success' : job.status === 'failed' ? 'danger' : 'muted'}>{job.status}</Badge></div><p class="mt-1 text-[11px] text-[#9a958b]">{job.candidates.length} candidates · {new Date(job.createdAt).toLocaleDateString('id-ID')}</p></button>{/each}</div>{/if}</Card>
     </div>
   </div>
 </div>

@@ -1,78 +1,18 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import { ArrowLeft, Image, Info, Play, Video } from '@lucide/svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Card from '$lib/components/ui/Card.svelte';
   import Input from '$lib/components/ui/Input.svelte';
   import { api } from '$lib/api';
   import type { AssetType, ResearchMode } from '$lib/types';
-
-  let keyword = '';
-  let category = 'general';
-  let assetType: AssetType = 'images';
-  let locale = 'en-GB';
-  let maxSuggestions = 5;
-  let assetsPerQuery = 30;
-  let autocompleteEnabled = true;
-  let mode: ResearchMode = 'primary';
-  let submitting = false;
-  let error = '';
-
-  async function submit() {
-    if (mode !== 'primary' && !keyword.trim()) { error = 'Seed keyword wajib diisi untuk mode ini.'; return; }
-    submitting = true; error = '';
-    try {
-      const run = await api.createRun({ keyword: mode === 'primary' ? '' : keyword.trim(), category, assetType, locale, maxSuggestions, assetsPerQuery, autocompleteEnabled, mode });
-      await goto(`/research/${run.id}`);
-    } catch (err) { error = err instanceof Error ? err.message : 'Research gagal dibuat'; }
-    finally { submitting = false; }
-  }
-
-  function selectMode(nextMode: ResearchMode) {
-    if (mode === 'primary' && nextMode !== 'primary') {
-      maxSuggestions = 5;
-      assetsPerQuery = 30;
-      autocompleteEnabled = true;
-    }
-    mode = nextMode;
-    if (nextMode === 'primary') {
-      maxSuggestions = 1;
-      assetsPerQuery = 100;
-      autocompleteEnabled = false;
-    }
-  }
+  let keyword = ''; let category = 'general'; let assetType: AssetType = 'images'; let locale = 'en-GB'; let maxSuggestions = 5; let assetsPerQuery = 30; let autocompleteEnabled = true; let mode: ResearchMode = 'primary'; let submitting = false; let error = '';
+  onMount(() => { keyword = page.url.searchParams.get('keyword') ?? ''; category = page.url.searchParams.get('category') ?? 'general'; if (keyword) mode = 'fast'; });
+  async function submit() { if (mode !== 'primary' && !keyword.trim()) { error = 'Seed keyword wajib diisi untuk mode ini.'; return; } submitting = true; error = ''; try { const run = await api.createRun({ keyword: mode === 'primary' ? '' : keyword.trim(), category, assetType, locale, maxSuggestions, assetsPerQuery, autocompleteEnabled, mode }); await goto(`/research/${run.id}`); } catch (err) { error = err instanceof Error ? err.message : 'Research gagal dibuat'; } finally { submitting = false; } }
+  function selectMode(nextMode: ResearchMode) { mode = nextMode; if (nextMode === 'primary') { maxSuggestions = 1; assetsPerQuery = 100; autocompleteEnabled = false; } else { maxSuggestions = 5; assetsPerQuery = 30; autocompleteEnabled = true; } }
 </script>
 
-<svelte:head><title>New research — StockScope</title></svelte:head>
-
-<div class="mx-auto max-w-3xl space-y-6">
-  <div><a href="/" class="mb-4 inline-flex items-center gap-2 text-xs text-slate-500 hover:text-slate-200"><ArrowLeft size={14} /> Back to overview</a><p class="text-xs font-medium uppercase tracking-widest text-cyan-400">Research setup</p><h1 class="mt-2 text-2xl font-semibold tracking-tight">Start a new research</h1><p class="mt-1 text-sm text-slate-500">Mulai dari snapshot Page One Adobe, atau gunakan mode keyword untuk riset query tertentu.</p></div>
-
-  <Card className="p-5 sm:p-6">
-    <form on:submit|preventDefault={submit} class="space-y-6">
-      {#if mode === 'primary'}
-        <div class="rounded-md border border-violet-400/20 bg-violet-400/5 p-4"><p class="text-sm font-medium text-violet-200">Adobe Stock Page One</p><p class="mt-1 text-xs leading-5 text-slate-400">Mode ini tidak memakai keyword. Sistem membuka halaman utama Adobe Stock, lalu mengambil asset dari sort Relevance, Most Recent, dan Downloads.</p></div>
-      {:else}
-        <div class="space-y-2"><label for="keyword" class="text-sm font-medium">Seed keyword</label><Input id="keyword" bind:value={keyword} placeholder="e.g. sustainable business, remote work, wellness" /><p class="text-xs text-slate-600">Coba gunakan frasa yang ingin Anda validasi untuk konten baru.</p></div>
-      {/if}
-
-      <div class="space-y-2"><label for="category" class="text-sm font-medium">Category</label><select id="category" bind:value={category} class="flex h-9 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-200 outline-none focus:border-cyan-400"><option value="general">General</option><option value="business">Business</option><option value="technology">Technology</option><option value="wellness">Wellness</option><option value="sustainability">Sustainability</option><option value="finance">Finance</option><option value="lifestyle">Lifestyle</option><option value="travel">Travel</option><option value="food">Food</option></select><p class="text-xs text-slate-600">Dipakai untuk mengelompokkan insight lintas research.</p></div>
-
-      <div class="space-y-2"><p class="text-sm font-medium">Asset type</p><div class="grid grid-cols-2 gap-2">
-        <button type="button" class={`flex items-center gap-3 rounded-md border p-3 text-left transition-colors ${assetType === 'images' ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => assetType = 'images'}><Image size={18} /><span><span class="block text-sm font-medium">Images</span><span class="mt-0.5 block text-[11px] opacity-70">Photos, illustrations & vectors</span></span></button>
-        <button type="button" class={`flex items-center gap-3 rounded-md border p-3 text-left transition-colors ${assetType === 'videos' ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => assetType = 'videos'}><Video size={18} /><span><span class="block text-sm font-medium">Videos</span><span class="mt-0.5 block text-[11px] opacity-70">Stock footage & motion</span></span></button>
-      </div></div>
-
-      <div class="grid gap-4 sm:grid-cols-2"><div class="space-y-2"><label for="locale" class="text-sm font-medium">Locale</label><select id="locale" bind:value={locale} class="flex h-9 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-200 outline-none focus:border-cyan-400"><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="id-ID">Indonesian</option></select><p class="text-xs text-slate-600">Mempengaruhi suggestion Adobe.</p></div><div class="space-y-2"><label for="suggestions" class="text-sm font-medium">Max suggestions</label><Input id="suggestions" type="number" bind:value={maxSuggestions} /><p class="text-xs text-slate-600">1–50. Mulai kecil untuk menghemat request.</p></div></div>
-      <div class="space-y-2"><label for="assets" class="text-sm font-medium">Assets per query</label><Input id="assets" type="number" bind:value={assetsPerQuery} /><p class="text-xs text-slate-600">1–100 aset untuk setiap kombinasi suggestion dan sort mode.</p></div>
-
-      <label class="flex cursor-pointer items-start gap-3 rounded-md border border-slate-800 bg-slate-950 p-3"><input type="checkbox" bind:checked={autocompleteEnabled} class="mt-0.5 h-4 w-4 accent-cyan-400" /><span><span class="block text-sm font-medium">Scrape Adobe autocomplete</span><span class="mt-1 block text-xs leading-5 text-slate-600">Jika aktif, sistem mengambil suggestion dari halaman bersih Adobe. Jika nonaktif, hanya seed keyword yang diproses dan research lebih cepat.</span></span></label>
-
-      <div class="flex gap-3 rounded-md border border-cyan-400/15 bg-cyan-400/5 p-3 text-xs leading-5 text-slate-400"><Info size={16} class="mt-0.5 shrink-0 text-cyan-400" /><span>Adobe Stock tidak menampilkan angka download individual. Sistem menyimpan <span class="font-mono text-cyan-300">download_rank</span> sebagai proxy popularitas.</span></div>
-      <div class="space-y-2"><p class="text-sm font-medium">Research mode</p><div class="grid gap-2 sm:grid-cols-3"><button type="button" class={`rounded-md border p-3 text-left transition-colors ${mode === 'primary' ? 'border-violet-400/60 bg-violet-400/10 text-violet-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => selectMode('primary')}><span class="block text-sm font-medium">Research Page One</span><span class="mt-1 block text-[11px] opacity-70">Halaman utama tanpa keyword, 3 sort, hingga 100 asset per sort.</span></button><button type="button" class={`rounded-md border p-3 text-left transition-colors ${mode === 'fast' ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => selectMode('fast')}><span class="block text-sm font-medium">Fast</span><span class="mt-1 block text-[11px] opacity-70">Downloads only, autocomplete terbatas, keyword detail 1 asset/query.</span></button><button type="button" class={`rounded-md border p-3 text-left transition-colors ${mode === 'full' ? 'border-cyan-400/60 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800'}`} on:click={() => selectMode('full')}><span class="block text-sm font-medium">Full</span><span class="mt-1 block text-[11px] opacity-70">Downloads, relevance, recent, autocomplete, dan related discovery.</span></button></div></div>
-
-      {#if error}<div class="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>{/if}
-      <div class="flex justify-end gap-2 border-t border-slate-800 pt-5"><a href="/"><Button variant="ghost" type="button">Cancel</Button></a><Button type="submit" disabled={submitting || (mode !== 'primary' && !keyword.trim())}><Play size={15} />{submitting ? 'Creating…' : mode === 'primary' ? 'Research Page One' : 'Start research'}</Button></div>
-    </form>
-  </Card>
-</div>
+<svelte:head><title>New research | StockScope</title></svelte:head>
+<div class="mx-auto max-w-3xl space-y-7"><div><a href="/" class="mb-4 inline-flex items-center gap-2 text-xs font-semibold text-[#77736b] hover:text-[#a74630]"><ArrowLeft size={14} /> Back to overview</a><p class="eyebrow">Research setup</p><h1 class="mt-2 text-3xl font-bold tracking-tight">Start a new research</h1><p class="mt-2 text-sm text-[#6d6a63]">Validasi seed keyword atau ambil snapshot Page One Adobe Stock.</p></div><Card className="p-5 sm:p-6"><form on:submit|preventDefault={submit} class="space-y-6"><div class="grid gap-2 sm:grid-cols-3">{#each [['primary','Page One','3 sort, tanpa keyword'],['fast','Fast','Downloads, cepat'],['full','Full','Semua sort dan detail']] as item}<button type="button" class={`rounded-lg border p-4 text-left ${mode === item[0] ? 'border-[#d75a3b] bg-[#fff0eb]' : 'border-[#e4e0d7] bg-[#fffdfa] hover:bg-[#fcfaf6]'}`} on:click={() => selectMode(item[0] as ResearchMode)}><span class="block text-sm font-bold">{item[1]}</span><span class="mt-1 block text-[11px] text-[#77736b]">{item[2]}</span></button>{/each}</div>{#if mode === 'primary'}<div class="rounded-lg border border-[#eadfd8] bg-[#fff8f4] p-4"><p class="text-sm font-bold text-[#a74630]">Adobe Stock Page One</p><p class="mt-1 text-xs leading-5 text-[#7e665f]">Tidak memakai keyword. Sistem membuka halaman utama dan membandingkan Relevance, Most Recent, dan Downloads.</p></div>{:else}<div class="space-y-2"><label for="keyword" class="text-sm font-semibold">Seed keyword</label><Input id="keyword" bind:value={keyword} placeholder="e.g. sustainable business, remote work, wellness" /></div>{/if}<div class="grid gap-4 sm:grid-cols-2"><div class="space-y-2"><label for="category" class="text-sm font-semibold">Category</label><select id="category" bind:value={category} class="h-10 w-full rounded-md border border-[#cfcac0] bg-[#fffdfa] px-3 text-sm text-[#3f3c37]"><option value="general">General</option><option value="business">Business</option><option value="technology">Technology</option><option value="wellness">Wellness</option><option value="sustainability">Sustainability</option><option value="finance">Finance</option><option value="lifestyle">Lifestyle</option><option value="travel">Travel</option><option value="food">Food</option></select></div><div class="space-y-2"><label for="locale" class="text-sm font-semibold">Locale</label><select id="locale" bind:value={locale} class="h-10 w-full rounded-md border border-[#cfcac0] bg-[#fffdfa] px-3 text-sm text-[#3f3c37]"><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="id-ID">Indonesian</option></select></div></div>{#if mode !== 'primary'}<div class="grid gap-4 sm:grid-cols-2"><div class="space-y-2"><label for="suggestions" class="text-sm font-semibold">Max suggestions</label><Input id="suggestions" type="number" bind:value={maxSuggestions} /></div><div class="space-y-2"><label for="assets" class="text-sm font-semibold">Assets per query</label><Input id="assets" type="number" bind:value={assetsPerQuery} /></div></div>{/if}<div class="grid grid-cols-2 gap-2"><button type="button" class={`flex min-h-11 items-center justify-center gap-2 rounded-md border text-xs font-semibold ${assetType === 'images' ? 'border-[#d75a3b] bg-[#fff0eb] text-[#a74630]' : 'border-[#d6d1c7] text-[#77736b]'}`} on:click={() => assetType = 'images'}><Image size={15} /> Images</button><button type="button" class={`flex min-h-11 items-center justify-center gap-2 rounded-md border text-xs font-semibold ${assetType === 'videos' ? 'border-[#d75a3b] bg-[#fff0eb] text-[#a74630]' : 'border-[#d6d1c7] text-[#77736b]'}`} on:click={() => assetType = 'videos'}><Video size={15} /> Videos</button></div>{#if mode !== 'primary'}<label class="flex cursor-pointer items-start gap-3 rounded-lg border border-[#e4e0d7] bg-[#f7f5f0] p-3"><input type="checkbox" bind:checked={autocompleteEnabled} class="mt-0.5 h-4 w-4 accent-[#d75a3b]" /><span><span class="block text-sm font-semibold">Scrape Adobe autocomplete</span><span class="mt-1 block text-xs leading-5 text-[#77736b]">Ambil suggestion terkait dari halaman Adobe.</span></span></label>{/if}<div class="flex gap-3 rounded-lg border border-[#dedbd3] bg-[#f7f5f0] p-3 text-xs leading-5 text-[#6d6a63]"><Info size={16} class="mt-0.5 shrink-0 text-[#d75a3b]" /><span>Adobe tidak menampilkan angka download individual. Sistem memakai download rank sebagai proxy popularitas.</span></div>{#if error}<div class="rounded-md border border-[#b94035]/25 bg-[#fff0ee] p-3 text-sm text-[#a3372f]">{error}</div>{/if}<div class="flex justify-end gap-2 border-t border-[#e8e3da] pt-5"><a href="/"><Button variant="ghost" type="button">Cancel</Button></a><Button type="submit" disabled={submitting || (mode !== 'primary' && !keyword.trim())}><Play size={15} />{submitting ? 'Creating...' : mode === 'primary' ? 'Research Page One' : 'Start research'}</Button></div></form></Card></div>

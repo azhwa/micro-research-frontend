@@ -263,6 +263,12 @@ export interface MonitoringSnapshot {
   runs: { sampled: number; byStatus: Record<string, number>; averageDurationSeconds: number | null };
   events: { sampled: number; byType: Record<string, number>; byLevel: Record<string, number> };
   scraper: { retries: number; recoveredJobs: number; partialRuns: number; keywordEnrichment: { success: number; empty: number; failed: number } };
+  system: {
+    cpu: { load1m: number; estimatedPercent: number; processPercent: number };
+    memory: { totalMb: number; freeMb: number; usedPercent: number; processRssMb: number };
+    uptimeSeconds: number;
+    cdp: { configured: boolean; reachable: boolean; browserVersion: string | null };
+  };
 }
 
 export interface AuthMe {
@@ -314,4 +320,42 @@ export interface ProxyEndpoint {
   lastError: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type SeedDiscoveryStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type SeedCandidateSource = 'observed' | 'derived' | 'ai_expanded';
+
+export interface SeedDiscoveryCandidate {
+  id: string;
+  keyword: string;
+  source: SeedCandidateSource;
+  opportunityScore: number | null;
+  confidence: 'low' | 'medium' | 'high';
+  evidenceKeywords: string[];
+  rationale: string;
+  promptAngles: string[];
+  rank: number;
+  createdAt: string;
+}
+
+export interface SeedDiscoveryJob {
+  id: string;
+  topic: string | null;
+  category: string;
+  assetType: AssetType;
+  locale: string;
+  requestedCount: number;
+  model: string;
+  promptVersion: string;
+  status: SeedDiscoveryStatus;
+  progressTotal: number;
+  progressCompleted: number;
+  summary: string | null;
+  cautions: string[];
+  errorMessage: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  updatedAt: string;
+  candidates: SeedDiscoveryCandidate[];
 }

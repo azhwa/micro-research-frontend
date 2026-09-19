@@ -7,55 +7,13 @@
   import { api } from '$lib/api';
   import type { ResearchComparison, ResearchRun } from '$lib/types';
   import { formatDate } from '$lib/utils';
-
-  let runs: ResearchRun[] = [];
-  let firstRunId = '';
-  let secondRunId = '';
-  let comparison: ResearchComparison | null = null;
-  let loading = true;
-  let comparing = false;
-  let error = '';
-
+  let runs: ResearchRun[] = []; let firstRunId = ''; let secondRunId = ''; let comparison: ResearchComparison | null = null; let loading = true; let comparing = false; let error = '';
   $: readyRuns = runs.filter((run) => ['completed', 'partial'].includes(run.status));
-  $: firstRun = runs.find((run) => run.id === firstRunId);
-  $: secondRun = runs.find((run) => run.id === secondRunId);
-
-  async function loadRuns() {
-    loading = true; error = '';
-    try {
-      runs = await api.listRuns(100);
-      if (!firstRunId && runs[0]) firstRunId = runs[0].id;
-      if (!secondRunId && runs[1]) secondRunId = runs[1].id;
-    } catch (err) { error = err instanceof Error ? err.message : 'Research tidak dapat dimuat'; }
-    finally { loading = false; }
-  }
-  async function compare() {
-    if (!firstRunId || !secondRunId || firstRunId === secondRunId) { error = 'Pilih dua research yang berbeda.'; return; }
-    comparing = true; error = '';
-    try { comparison = await api.getComparison(firstRunId, secondRunId); }
-    catch (err) { error = err instanceof Error ? err.message : 'Research tidak dapat dibandingkan'; }
-    finally { comparing = false; }
-  }
+  async function loadRuns() { loading = true; error = ''; try { runs = await api.listRuns(100); if (!firstRunId && runs[0]) firstRunId = runs[0].id; if (!secondRunId && runs[1]) secondRunId = runs[1].id; } catch (err) { error = err instanceof Error ? err.message : 'Research tidak dapat dimuat'; } finally { loading = false; } }
+  async function compare() { if (!firstRunId || !secondRunId || firstRunId === secondRunId) { error = 'Pilih dua research yang berbeda.'; return; } comparing = true; error = ''; try { comparison = await api.getComparison(firstRunId, secondRunId); } catch (err) { error = err instanceof Error ? err.message : 'Research tidak dapat dibandingkan'; } finally { comparing = false; } }
   const deltaLabel = (value: number) => `${value > 0 ? '+' : ''}${value}`;
   onMount(loadRuns);
 </script>
 
-<svelte:head><title>Compare runs — StockScope</title></svelte:head>
-
-<div class="mx-auto max-w-6xl space-y-6">
-  <div><p class="mb-2 text-xs font-medium uppercase tracking-widest text-cyan-400">Historical analysis</p><h1 class="text-2xl font-semibold tracking-tight">Compare research runs</h1><p class="mt-1 text-sm text-slate-500">Bandingkan perubahan skor, keyword, dan overlap aset antar research.</p></div>
-  <Card className="p-4"><div class="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto]"><select aria-label="First research to compare" bind:value={firstRunId} class="h-9 rounded-md border border-slate-700 bg-slate-950 px-3 text-xs text-slate-300"><option value="">First research</option>{#each readyRuns as run}<option value={run.id}>{run.seedKeyword} · {run.category || 'general'} · {formatDate(run.createdAt)}</option>{/each}</select><div class="hidden items-center justify-center text-slate-600 md:flex"><ArrowRight size={16} /></div><select aria-label="Second research to compare" bind:value={secondRunId} class="h-9 rounded-md border border-slate-700 bg-slate-950 px-3 text-xs text-slate-300"><option value="">Second research</option>{#each readyRuns as run}<option value={run.id}>{run.seedKeyword} · {run.category || 'general'} · {formatDate(run.createdAt)}</option>{/each}</select><Button on:click={compare} disabled={comparing || loading}><GitCompare size={14} />{comparing ? 'Comparing…' : 'Compare'}</Button></div></Card>
-  {#if error}<div class="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>{/if}
-  {#if loading}<Card className="p-12 text-center text-sm text-slate-500">Loading research…</Card>{:else if !readyRuns.length}<Card className="p-12 text-center"><p class="text-sm text-slate-400">Belum ada research yang bisa dibandingkan.</p><p class="mt-1 text-xs text-slate-600">Selesaikan minimal dua research terlebih dahulu.</p></Card>{:else if comparison}
-    <div class="grid gap-3 sm:grid-cols-5">
-      {#each Object.entries(comparison.metrics) as [key, metric]}
-        <Card className="p-4">
-          <p class="text-[11px] capitalize text-slate-500">{key.replace('Score', '')}</p>
-          <p class="mt-2 font-mono text-lg font-semibold text-slate-100">{metric.second ?? '—'}</p>
-          <p class={`mt-1 font-mono text-xs ${metric.delta !== null && metric.delta > 0 ? 'text-emerald-300' : metric.delta !== null && metric.delta < 0 ? 'text-red-300' : 'text-slate-500'}`}>{metric.delta === null ? 'Belum dapat dibandingkan' : `${deltaLabel(metric.delta)} vs first`}</p>
-        </Card>
-      {/each}
-    </div>
-    <Card><div class="flex items-center justify-between border-b border-slate-800 px-4 py-3"><div><h2 class="text-sm font-medium">Keyword changes</h2><p class="mt-0.5 text-xs text-slate-500">Perubahan opportunity score dan Downloads rank.</p></div><Badge tone="muted">{comparison.assetOverlap.jaccardPct}% asset overlap</Badge></div><div class="overflow-x-auto"><table class="w-full min-w-[720px] text-left text-xs"><thead class="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-600"><tr><th class="px-4 py-3 font-medium">Keyword</th><th class="px-4 py-3 font-medium">State</th><th class="px-4 py-3 font-medium">First score</th><th class="px-4 py-3 font-medium">Second score</th><th class="px-4 py-3 font-medium">Change</th><th class="px-4 py-3 font-medium">Rank</th></tr></thead><tbody class="divide-y divide-slate-800/70">{#each comparison.keywordChanges as item}<tr><td class="px-4 py-3 font-medium text-cyan-300">{item.keyword}</td><td class="px-4 py-3"><Badge tone={item.state === 'new' ? 'success' : item.state === 'lost' ? 'danger' : item.state === 'changed' ? 'default' : 'muted'}>{item.state}</Badge></td><td class="px-4 py-3 font-mono text-slate-500">{item.firstScore ?? '—'}</td><td class="px-4 py-3 font-mono text-slate-300">{item.secondScore ?? '—'}</td><td class={`px-4 py-3 font-mono ${item.delta && item.delta > 0 ? 'text-emerald-300' : item.delta && item.delta < 0 ? 'text-red-300' : 'text-slate-500'}`}>{item.delta === null ? '—' : deltaLabel(item.delta)}</td><td class="px-4 py-3 font-mono text-slate-500">{item.firstRank ?? '—'} → {item.secondRank ?? '—'}</td></tr>{/each}</tbody></table></div></Card>
-  {:else}<Card className="p-12 text-center"><RefreshCw size={18} class="mx-auto text-slate-600" /><p class="mt-3 text-sm text-slate-400">Pilih dua research untuk melihat perbandingan.</p></Card>{/if}
-</div>
+<svelte:head><title>Compare runs | StockScope</title></svelte:head>
+<div class="mx-auto max-w-6xl space-y-7"><section><p class="eyebrow">Historical analysis</p><h1 class="mt-2 text-3xl font-bold tracking-tight">Compare research runs</h1><p class="mt-2 text-sm text-[#6d6a63]">Lihat apakah opportunity berubah, keyword baru masuk, atau asset yang sama tetap muncul.</p></section><Card className="p-5"><div class="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto]"><select aria-label="First research to compare" bind:value={firstRunId} class="h-10 rounded-md border border-[#cfcac0] bg-[#fffdfa] px-3 text-xs text-[#3f3c37]"><option value="">First research</option>{#each readyRuns as run}<option value={run.id}>{run.seedKeyword || 'Page One'} · {run.category || 'general'} · {formatDate(run.createdAt)}</option>{/each}</select><div class="hidden items-center justify-center text-[#b2ada3] md:flex"><ArrowRight size={16} /></div><select aria-label="Second research to compare" bind:value={secondRunId} class="h-10 rounded-md border border-[#cfcac0] bg-[#fffdfa] px-3 text-xs text-[#3f3c37]"><option value="">Second research</option>{#each readyRuns as run}<option value={run.id}>{run.seedKeyword || 'Page One'} · {run.category || 'general'} · {formatDate(run.createdAt)}</option>{/each}</select><Button on:click={compare} disabled={comparing || loading}><GitCompare size={14} />{comparing ? 'Comparing...' : 'Compare'}</Button></div></Card>{#if error}<div class="rounded-md border border-[#b94035]/25 bg-[#fff0ee] p-3 text-sm text-[#a3372f]">{error}</div>{/if}{#if loading}<Card className="p-12 text-center text-sm text-[#77736b]">Loading research...</Card>{:else if !readyRuns.length}<Card className="p-12 text-center"><p class="text-sm font-bold">Belum ada research yang bisa dibandingkan.</p><p class="mt-1 text-xs text-[#77736b]">Selesaikan minimal dua research terlebih dahulu.</p></Card>{:else if comparison}<div class="grid gap-3 sm:grid-cols-5">{#each Object.entries(comparison.metrics) as [key, metric]}<Card className="p-4"><p class="text-[11px] capitalize text-[#8d897f]">{key.replace('Score', '')}</p><p class="mt-2 font-mono text-lg font-bold">{metric.second ?? '--'}</p><p class={`mt-1 font-mono text-xs ${metric.delta !== null && metric.delta > 0 ? 'text-[#39704a]' : metric.delta !== null && metric.delta < 0 ? 'text-[#a3372f]' : 'text-[#9a958b]'}`}>{metric.delta === null ? 'No baseline' : `${deltaLabel(metric.delta)} vs first`}</p></Card>{/each}</div><Card><div class="flex items-center justify-between border-b border-[#e8e3da] px-5 py-4"><div><p class="eyebrow">Keyword changes</p><p class="mt-1 text-xs text-[#77736b]">Perubahan opportunity score dan download rank.</p></div><Badge tone="muted">{comparison.assetOverlap.jaccardPct}% asset overlap</Badge></div><div class="overflow-x-auto"><table class="w-full min-w-[720px] text-left text-xs"><thead class="border-b border-[#e8e3da] text-[10px] uppercase tracking-wider text-[#9a958b]"><tr><th class="px-5 py-3">Keyword</th><th class="px-5 py-3">State</th><th class="px-5 py-3">First</th><th class="px-5 py-3">Second</th><th class="px-5 py-3">Change</th><th class="px-5 py-3">Rank</th></tr></thead><tbody class="divide-y divide-[#eeeae2]">{#each comparison.keywordChanges as item}<tr><td class="px-5 py-3 font-semibold text-[#a74630]">{item.keyword}</td><td class="px-5 py-3"><Badge tone={item.state === 'new' ? 'success' : item.state === 'lost' ? 'danger' : item.state === 'changed' ? 'default' : 'muted'}>{item.state}</Badge></td><td class="px-5 py-3 font-mono text-[#77736b]">{item.firstScore ?? '--'}</td><td class="px-5 py-3 font-mono">{item.secondScore ?? '--'}</td><td class="px-5 py-3 font-mono">{item.delta === null ? '--' : deltaLabel(item.delta)}</td><td class="px-5 py-3 font-mono text-[#77736b]">{item.firstRank ?? '--'} → {item.secondRank ?? '--'}</td></tr>{/each}</tbody></table></div></Card>{:else}<Card className="p-12 text-center"><RefreshCw size={18} class="mx-auto text-[#b2ada3]" /><p class="mt-3 text-sm font-bold">Pilih dua research</p><p class="mt-1 text-xs text-[#77736b]">Hasil perbandingan akan tampil di sini.</p></Card>{/if}</div>

@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import type { AiRecommendation, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, ProxyEndpoint, ResearchComparison, ResearchDetailLog, ResearchEvent, ResearchKeyword, ResearchResult, ResearchRun, ResearchSummary, RunCreated } from './types';
+import type { AiRecommendation, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, ProxyEndpoint, ResearchComparison, ResearchDetailLog, ResearchEvent, ResearchKeyword, ResearchResult, ResearchRun, ResearchSummary, RunCreated, SeedDiscoveryJob } from './types';
 
 const API_BASE = (env.PUBLIC_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
@@ -62,6 +62,10 @@ export const api = {
     if (options.category) params.set('category', options.category);
     return `${API_BASE}/api/insights/export.csv?${params.toString()}`;
   },
+  createSeedDiscovery: (body: { topic?: string; category?: string; assetType?: string; locale?: string; count?: number; model?: string }) => request<SeedDiscoveryJob>('/api/seed-discovery', { method: 'POST', body: JSON.stringify(body) }),
+  listSeedDiscoveryJobs: (limit = 20) => request<SeedDiscoveryJob[]>(`/api/seed-discovery?limit=${limit}`),
+  getSeedDiscoveryJob: (id: string) => request<SeedDiscoveryJob>(`/api/seed-discovery/${id}`),
+  cancelSeedDiscoveryJob: (id: string) => request<SeedDiscoveryJob>(`/api/seed-discovery/${id}/cancel`, { method: 'POST', body: JSON.stringify({}) }),
   getComparison: (firstRunId: string, secondRunId: string, limit = 100) => request<ResearchComparison>(`/api/research-comparisons?firstRunId=${encodeURIComponent(firstRunId)}&secondRunId=${encodeURIComponent(secondRunId)}&limit=${limit}`),
   getMonitoring: () => request<MonitoringSnapshot>('/api/monitoring'),
   listGeminiKeys: () => request<GeminiApiKey[]>('/api/gemini/keys'),
