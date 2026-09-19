@@ -21,8 +21,6 @@
     "vite": "^7.1.7"
   },
   "dependencies": {
-    "@clerk/clerk-js": "^6.31.1",
-    "@clerk/ui": "^1.32.3",
     "@lucide/svelte": "^1.45.0",
     "bits-ui": "^2.9.0",
     "clsx": "^2.1.1",

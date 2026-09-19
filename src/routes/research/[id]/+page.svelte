@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import { Activity, ArrowLeft, Ban, BarChart3, Check, Download, ExternalLink, Globe, Image, LoaderCircle, RefreshCw, Search, Sparkles, Tag, Trash2, X } from '@lucide/svelte';
   import { page } from '$app/state';
   import Badge from '$lib/components/ui/Badge.svelte';
@@ -30,7 +31,8 @@
   let aiPreparing = false;
   let aiStatus = '';
   let initialTabSelected = false;
-  let timer: ReturnType<typeof setInterval> | undefined;
+  let streamController: AbortController | null = null;
+  let streamRetryTimer: ReturnType<typeof setTimeout> | undefined;
 
   interface ScrapingLocationView { ip: string | null; location: string | null; connection: string; isp: string | null; note: string | null; }
 
@@ -114,6 +116,38 @@
     finally { refreshing = false; loading = false; }
   }
 
+  function scheduleStreamReconnect() {
+    if (streamRetryTimer || isTerminal) return;
+    streamRetryTimer = setTimeout(() => {
+      streamRetryTimer = undefined;
+      connectResearchStream();
+    }, 3000);
+  }
+
+  function connectResearchStream() {
+    streamController?.abort();
+    streamController = api.connectResearchStream(runId, (event, payload) => {
+      if (event === 'snapshot' && payload && typeof payload === 'object') {
+        const snapshot = payload as { run?: ResearchRun; events?: ResearchEvent[]; detailLogs?: ResearchDetailLog[] };
+        if (snapshot.run) run = snapshot.run;
+        if (snapshot.events) events = [...snapshot.events].reverse();
+        if (snapshot.detailLogs) detailLogs = snapshot.detailLogs;
+        error = '';
+        loading = false;
+      } else if (event === 'complete') {
+        void loadData(true);
+      } else if (event === 'error' || event === 'close') {
+        const status = payload && typeof payload === 'object' && 'status' in payload ? payload.status : null;
+        if (status === 401) {
+          error = 'Session login berakhir. Silakan login kembali.';
+          void goto('/sign-in?reason=session-expired');
+        } else if (!isTerminal) {
+          scheduleStreamReconnect();
+        }
+      }
+    });
+  }
+
   async function cancel() {
     if (!run || !confirm('Batalkan research ini?')) return;
     try { run = await api.cancelRun(run.id); } catch (err) { error = err instanceof Error ? err.message : 'Research tidak dapat dibatalkan'; }
@@ -155,8 +189,11 @@
 
   onMount(() => {
     void loadData();
-    timer = setInterval(() => loadData(!isTerminal), 5000);
-    return () => { if (timer) clearInterval(timer); };
+    connectResearchStream();
+    return () => {
+      streamController?.abort();
+      if (streamRetryTimer) clearTimeout(streamRetryTimer);
+    };
   });
 </script>
 

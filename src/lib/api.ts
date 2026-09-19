@@ -1,6 +1,5 @@
 import { env } from '$env/dynamic/public';
 import type { AiRecommendation, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, ProxyEndpoint, ResearchComparison, ResearchDetailLog, ResearchEvent, ResearchKeyword, ResearchResult, ResearchRun, ResearchSummary, RunCreated } from './types';
-import { getClerkToken } from './clerk';
 
 const API_BASE = (env.PUBLIC_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
@@ -12,15 +11,14 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = await getClerkToken();
   const headers = new Headers(init?.headers);
   if (init?.body !== undefined && init.body !== null) {
     headers.set('content-type', 'application/json');
   }
-  if (token) headers.set('authorization', `Bearer ${token}`);
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers
+    headers,
+    credentials: 'include'
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
@@ -35,6 +33,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   base: API_BASE,
   getHealth: () => request<{ status: string }>('/api/health'),
+  login: (body: { username: string; password: string }) => request<AuthMe>('/api/auth/login', { method: 'POST', body: JSON.stringify(body) }),
+  logout: () => request<{ loggedOut: boolean }>('/api/auth/logout', { method: 'POST', body: JSON.stringify({}) }),
   getAuthMe: () => request<AuthMe>('/api/auth/me'),
   listRuns: (limit = 20) => request<ResearchRun[]>(`/api/research-runs?limit=${limit}`),
   getRun: (id: string) => request<ResearchRun>(`/api/research-runs/${id}`),
@@ -84,5 +84,56 @@ export const api = {
   getAiRecommendations: (id: string, limit = 20) => request<AiRecommendation[]>(`/api/research-runs/${id}/ai-recommendations?limit=${limit}`),
   createRun: (body: { keyword: string; category?: string; assetType: 'images' | 'videos'; locale: string; maxSuggestions: number; assetsPerQuery: number; autocompleteEnabled: boolean; mode: 'fast' | 'full' | 'primary' }) =>
     request<RunCreated>('/api/research-runs', { method: 'POST', body: JSON.stringify(body) }),
-  cancelRun: (id: string) => request<ResearchRun>(`/api/research-runs/${id}/cancel`, { method: 'POST' })
+  cancelRun: (id: string) => request<ResearchRun>(`/api/research-runs/${id}/cancel`, { method: 'POST' }),
+  connectResearchStream: (id: string, onEvent: (event: string, payload: unknown) => void) => {
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/research-runs/${id}/stream`, {
+          headers: { accept: 'text/event-stream' },
+          credentials: 'include',
+          signal: controller.signal
+        });
+        if (!response.ok) {
+          onEvent('error', { status: response.status });
+          return;
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) return;
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let eventName = 'message';
+        let dataLines: string[] = [];
+
+        const dispatch = () => {
+          if (!dataLines.length) return;
+          const raw = dataLines.join('\n');
+          let payload: unknown = raw;
+          try { payload = JSON.parse(raw); } catch { /* Keep plain SSE data. */ }
+          onEvent(eventName, payload);
+          eventName = 'message';
+          dataLines = [];
+        };
+
+        while (!controller.signal.aborted) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          buffer += decoder.decode(chunk.value, { stream: true });
+          const lines = buffer.split(/\r?\n/);
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            if (!line) { dispatch(); continue; }
+            if (line.startsWith('event:')) eventName = line.slice(6).trim();
+            else if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart());
+          }
+        }
+        dispatch();
+        if (!controller.signal.aborted) onEvent('close', null);
+      } catch (error) {
+        if (!controller.signal.aborted) onEvent('error', error);
+      }
+    })();
+    return controller;
+  }
 };

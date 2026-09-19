@@ -4,38 +4,60 @@
   import { Layers3, LockKeyhole } from '@lucide/svelte';
   import Card from '$lib/components/ui/Card.svelte';
   import { ApiError, api } from '$lib/api';
-  import { loadClerk, clerkConfigured } from '$lib/clerk';
 
-  let signInNode: HTMLDivElement;
-  let loading = true;
+  let username = '';
+  let password = '';
+  let loading = false;
+  let checking = true;
   let error = '';
 
+  async function submit(): Promise<void> {
+    error = '';
+    loading = true;
+    try {
+      await api.login({ username, password });
+      await goto('/');
+    } catch (err) {
+      error = err instanceof ApiError && err.status === 401
+        ? 'Username atau password salah.'
+        : err instanceof Error ? err.message : 'Login tidak dapat diproses.';
+    } finally {
+      loading = false;
+    }
+  }
+
   onMount(() => {
-    let unmount = () => {};
     void (async () => {
-      if (!clerkConfigured()) { loading = false; error = 'Clerk belum dikonfigurasi. Isi PUBLIC_CLERK_PUBLISHABLE_KEY pada frontend.'; return; }
       try {
-        const clerk = await loadClerk();
-        if (!clerk) throw new Error('Clerk tidak tersedia');
-        if (clerk.user) {
-          try {
-            await api.getAuthMe();
-            await goto('/');
-            return;
-          } catch (err) {
-            if (!(err instanceof ApiError && err.status === 401)) throw err;
-            // Clear a stale Clerk session so the user can authenticate again.
-            await clerk.signOut();
-          }
-        }
-        clerk.mountSignIn(signInNode, { signUpUrl: '/sign-in' });
-        unmount = () => clerk.unmountSignIn(signInNode);
-      } catch (err) { error = err instanceof Error ? err.message : 'Sign in tidak dapat dimuat'; }
-      finally { loading = false; }
+        await api.getAuthMe();
+        await goto('/');
+      } catch {
+        checking = false;
+      }
     })();
-    return () => unmount();
   });
 </script>
 
 <svelte:head><title>Sign in — StockScope</title></svelte:head>
-<div class="flex min-h-[calc(100vh-7rem)] items-center justify-center py-10"><div class="w-full max-w-md space-y-5"><div class="text-center"><div class="mx-auto flex h-10 w-10 items-center justify-center rounded-md bg-cyan-400 text-slate-950"><Layers3 size={20} /></div><h1 class="mt-4 text-xl font-semibold">Sign in to StockScope</h1><p class="mt-1 text-sm text-slate-500">Akses hanya tersedia melalui invitation.</p></div><Card className="p-4"><div class="mb-4 flex items-center gap-2 text-xs text-slate-500"><LockKeyhole size={14} class="text-cyan-400" /> Invite-only workspace</div>{#if loading}<div class="py-8 text-center text-sm text-slate-500">Loading secure sign in…</div>{:else if error}<div class="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>{/if}<div bind:this={signInNode}></div></Card></div></div>
+<div class="flex min-h-[calc(100vh-7rem)] items-center justify-center py-10">
+  <div class="w-full max-w-md space-y-5">
+    <div class="text-center">
+      <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-md bg-cyan-400 text-slate-950"><Layers3 size={20} /></div>
+      <h1 class="mt-4 text-xl font-semibold">Sign in to StockScope</h1>
+      <p class="mt-1 text-sm text-slate-500">Masuk ke workspace riset pribadi.</p>
+    </div>
+    <Card className="p-4">
+      <div class="mb-4 flex items-center gap-2 text-xs text-slate-500"><LockKeyhole size={14} class="text-cyan-400" /> Login pribadi</div>
+      {#if checking}
+        <div class="py-8 text-center text-sm text-slate-500">Memeriksa session…</div>
+      {:else}
+        <form class="space-y-4" on:submit|preventDefault={() => void submit()}>
+          {#if error}<div class="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>{/if}
+          <label class="block text-xs text-slate-400">Username<input bind:value={username} autocomplete="username" required class="mt-1 h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm outline-none focus:border-cyan-400" /></label>
+          <label class="block text-xs text-slate-400">Password<input type="password" bind:value={password} autocomplete="current-password" required class="mt-1 h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3 text-sm outline-none focus:border-cyan-400" /></label>
+          <button type="submit" disabled={loading} class="h-10 w-full rounded-md bg-cyan-400 px-4 text-sm font-medium text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Signing in…' : 'Sign in'}</button>
+        </form>
+      {/if}
+    </Card>
+  </div>
+</div>

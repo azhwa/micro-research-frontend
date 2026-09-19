@@ -4,16 +4,13 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { ApiError, api } from '$lib/api';
-  import { clerkConfigured, loadClerk } from '$lib/clerk';
   import { cn } from '$lib/utils';
   let backendStatus: 'checking' | 'online' | 'offline' = 'checking';
   let authReady = false;
   let signedIn = false;
-  let userButtonNode: HTMLDivElement;
 
   async function handleLogout(): Promise<void> {
-    const clerk = await loadClerk();
-    await clerk?.signOut();
+    await api.logout();
     await goto('/sign-in');
   }
 
@@ -22,39 +19,19 @@
     let unmountUserButton = () => {};
     void (async () => {
       try { await api.getHealth(); backendStatus = 'online'; } catch { backendStatus = 'offline'; }
-      if (!clerkConfigured()) { signedIn = true; authReady = true; return; }
-      const clerk = await loadClerk();
-      if (!clerk) { authReady = true; return; }
-      const syncAuth = async () => {
-        if (clerk.user) {
-          try {
-            // Clerk can still expose a cached user while the backend rejects
-            // its old/invalid session token. Validate both sides before
-            // showing the authenticated application shell.
-            await api.getAuthMe();
-          } catch (error) {
-            if (error instanceof ApiError && error.status === 401) {
-              await clerk.signOut();
-              signedIn = false;
-              authReady = true;
-              if (!page.url.pathname.startsWith('/sign-in')) {
-                void goto('/sign-in?reason=session-expired');
-              }
-              return;
-            }
-          }
-        }
-
-        signedIn = Boolean(clerk.user);
+      try {
+        await api.getAuthMe();
+        signedIn = true;
+        if (page.url.pathname.startsWith('/sign-in')) void goto('/');
+      } catch (error) {
+        signedIn = false;
+        if (!(error instanceof ApiError && error.status === 401)) backendStatus = 'offline';
+        if (!page.url.pathname.startsWith('/sign-in')) void goto('/sign-in');
+      } finally {
         authReady = true;
-        if (!signedIn && !page.url.pathname.startsWith('/sign-in')) void goto('/sign-in');
-        if (signedIn && page.url.pathname.startsWith('/sign-in')) void goto('/');
-      };
-      unsubscribe = clerk.addListener(() => { void syncAuth(); });
-      void syncAuth();
-      if (userButtonNode && clerk.user) { clerk.mountUserButton(userButtonNode); unmountUserButton = () => clerk.unmountUserButton(userButtonNode); }
+      }
     })();
-    return () => { unsubscribe(); unmountUserButton(); };
+    return () => { unsubscribe(); };
   });
 </script>
 
@@ -73,7 +50,7 @@
         <span class="text-sm font-semibold tracking-tight">Stock<span class="text-cyan-400">Scope</span></span>
         <span class="hidden rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-500 sm:inline">MVP</span>
       </a>
-      <div class="flex items-center gap-3 text-xs text-slate-500"><span class={`h-1.5 w-1.5 rounded-full ${backendStatus === 'online' ? 'bg-emerald-400' : backendStatus === 'offline' ? 'bg-red-400' : 'bg-amber-400'}`}></span>{backendStatus === 'online' ? 'Backend online' : backendStatus === 'offline' ? 'Backend offline' : 'Checking backend'}<div bind:this={userButtonNode} class="min-h-7 min-w-7"></div><button type="button" on:click={() => void handleLogout()} aria-label="Logout" title="Logout" class="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-700 px-2.5 text-xs text-slate-400 transition-colors hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-300"><LogOut size={14} /><span class="hidden sm:inline">Logout</span></button></div>
+      <div class="flex items-center gap-3 text-xs text-slate-500"><span class={`h-1.5 w-1.5 rounded-full ${backendStatus === 'online' ? 'bg-emerald-400' : backendStatus === 'offline' ? 'bg-red-400' : 'bg-amber-400'}`}></span>{backendStatus === 'online' ? 'Backend online' : backendStatus === 'offline' ? 'Backend offline' : 'Checking backend'}<button type="button" on:click={() => void handleLogout()} aria-label="Logout" title="Logout" class="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-700 px-2.5 text-xs text-slate-400 transition-colors hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-300"><LogOut size={14} /><span class="hidden sm:inline">Logout</span></button></div>
     </div>
   </header>
   <nav class="flex gap-2 overflow-x-auto border-b border-slate-800/70 px-4 py-2 lg:hidden">
