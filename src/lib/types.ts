@@ -198,6 +198,10 @@ export interface GlobalKeywordInsight {
   researchCount: number;
   snapshotCount: number;
   confidence: 'low' | 'medium' | 'high';
+  globalRank: number | null;
+  level: 0 | 1 | 2 | 3 | 4 | 5;
+  label: string;
+  indicator: string;
   trend: 'up' | 'stable' | 'down' | 'unknown';
   averageOpportunityScore: number | null;
   globalOpportunityScore: number | null;
