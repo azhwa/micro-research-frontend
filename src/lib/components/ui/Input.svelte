@@ -8,4 +8,4 @@
   export let inputmode: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search' | undefined = undefined;
 </script>
 
-<input bind:value {placeholder} {type} {id} {inputmode} class={cn('flex h-10 w-full rounded-md border border-[#cfcac0] bg-[#fffdfa] px-3 py-1 text-sm text-[#242322] outline-none placeholder:text-[#99948a] focus:border-[#d75a3b] focus:ring-2 focus:ring-[#d75a3b]/15', className)} />
+<input bind:value {placeholder} {type} {id} {inputmode} class={cn('flex h-10 w-full rounded-md border border-input bg-card px-3 py-1 text-sm text-card-foreground outline-none placeholder:text-muted-foreground focus:border-active focus:ring-2 focus:ring-active/20', className)} />

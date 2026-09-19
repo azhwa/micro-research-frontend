@@ -3,4 +3,4 @@
   export let className = '';
 </script>
 
-<section class={cn('rounded-xl border border-[#dedbd3] bg-[#fffdfa] shadow-[0_8px_30px_rgba(60,48,35,0.04)]', className)}><slot /></section>
+<section class={cn('rounded-xl border border-border bg-card text-card-foreground shadow-sm', className)}><slot /></section>

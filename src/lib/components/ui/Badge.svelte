@@ -4,9 +4,9 @@
   export let className = '';
 </script>
 
-<span class={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold',
-  tone === 'default' && 'border-[#d75a3b]/25 bg-[#fff0eb] text-[#a74630]',
-  tone === 'muted' && 'border-[#d5d1c8] bg-[#f4f2ed] text-[#77736b]',
-  tone === 'success' && 'border-[#78a887]/30 bg-[#edf7ef] text-[#39704a]',
-  tone === 'warning' && 'border-[#d29b45]/35 bg-[#fff7e4] text-[#956a1b]',
-  tone === 'danger' && 'border-[#b94035]/25 bg-[#fff0ee] text-[#a3372f]', className)}><slot /></span>
+<span class={cn('inline-flex items-center rounded-sm border px-2 py-1 text-[11px] font-semibold leading-none',
+  tone === 'default' && 'border-primary/30 bg-primary/10 text-primary',
+  tone === 'muted' && 'border-border bg-muted text-muted-foreground',
+  tone === 'success' && 'border-success/30 bg-success/10 text-success',
+  tone === 'warning' && 'border-warning/35 bg-warning/10 text-warning',
+  tone === 'danger' && 'border-destructive/25 bg-destructive/10 text-destructive', className)}><slot /></span>
