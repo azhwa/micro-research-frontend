@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import type { AiRecommendation, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, ProxyEndpoint, ResearchComparison, ResearchEvent, ResearchKeyword, ResearchResult, ResearchRun, ResearchSummary, RunCreated } from './types';
+import type { AiRecommendation, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, ProxyEndpoint, ResearchComparison, ResearchDetailLog, ResearchEvent, ResearchKeyword, ResearchResult, ResearchRun, ResearchSummary, RunCreated } from './types';
 import { getClerkToken } from './clerk';
 
 const API_BASE = (env.PUBLIC_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -42,6 +42,7 @@ export const api = {
   getResults: (id: string, limit = 1000) => request<ResearchResult[]>(`/api/research-runs/${id}/results?limit=${limit}`),
   getKeywords: (id: string, limit = 1000) => request<ResearchKeyword[]>(`/api/research-runs/${id}/keywords?limit=${limit}`),
   getEvents: (id: string, limit = 100) => request<ResearchEvent[]>(`/api/research-runs/${id}/events?limit=${limit}`),
+  getDetailLogs: (id: string, limit = 100) => request<ResearchDetailLog[]>(`/api/research-runs/${id}/detail-log?limit=${limit}`),
   getSummary: (id: string, limit = 20) => request<ResearchSummary>(`/api/research-runs/${id}/summary?limit=${limit}`),
   getKeywordOpportunities: (id: string, limit = 50) => request<ResearchSummary['topKeywords']>(`/api/research-runs/${id}/keyword-opportunities?limit=${limit}`),
   getTopAssets: (id: string, limit = 50) => request<ResearchSummary['topAssets']>(`/api/research-runs/${id}/top-assets?limit=${limit}`),

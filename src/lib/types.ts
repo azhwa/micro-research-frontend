@@ -63,6 +63,24 @@ export interface ResearchEvent {
   createdAt: string;
 }
 
+export interface ResearchDetailLog {
+  id: string;
+  researchRunId: string;
+  createdAt: string;
+  type: 'assets_observed' | 'keyword_summary' | string;
+  query?: string;
+  sortMode?: string;
+  count?: number;
+  assets?: Array<{
+    externalId: string;
+    rank: number;
+    title: string;
+    thumbnail: 'valid' | 'missing';
+    thumbnailUrl?: string;
+  }>;
+  summary?: Record<string, number | string | boolean | null>;
+}
+
 export interface KeywordOpportunity {
   keyword: string;
   normalizedKeyword: string;
