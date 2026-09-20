@@ -13,7 +13,7 @@
 
   async function submit(): Promise<void> {
     error = ''; loading = true;
-    try { await api.login({ username, password }); await goto('/'); }
+    try { await api.login({ username, password }); window.location.replace('/'); }
     catch (err) { error = err instanceof ApiError && err.status === 401 ? 'Username atau password salah.' : err instanceof Error ? err.message : 'Login tidak dapat diproses.'; }
     finally { loading = false; }
   }
