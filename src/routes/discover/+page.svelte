@@ -90,8 +90,8 @@
 
 <div class="mx-auto max-w-6xl space-y-7">
   <section class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-    <div><p class="eyebrow">Research discovery</p><h1 class="mt-2 text-3xl font-bold tracking-tight">Find a seed worth researching.</h1><p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Discover Ideas hanya menyusun kandidat research. Prompt dibuat terpisah di Prompt Studio dari keyword yang sudah punya evidence.</p></div>
-    <a href="/research/new"><Button variant="outline" size="sm">Manual research <ArrowRight size={14} /></Button></a>
+    <div class="min-w-0"><p class="eyebrow">Research discovery</p><h1 class="mt-2 text-3xl font-bold tracking-tight">Find a seed worth researching.</h1><p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Discover Ideas hanya menyusun kandidat research. Prompt dibuat terpisah di Prompt Studio dari keyword yang sudah punya evidence.</p></div>
+    <a class="w-full shrink-0 sm:w-auto" href="/research/new"><Button className="w-full whitespace-nowrap sm:w-auto" variant="outline" size="sm">Manual research <ArrowRight size={14} /></Button></a>
   </section>
 
   <div class="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,.85fr)]">
