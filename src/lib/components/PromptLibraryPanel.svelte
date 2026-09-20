@@ -8,6 +8,7 @@
   import type { PromptGenerationSet, SavedPrompt } from '$lib/types';
 
   const PAGE_SIZE = 50;
+  const NEW_WINDOW_MS = 7 * 24 * 60 * 60 * 1_000;
   let groups: PromptGenerationSet[] = [];
   let loading = true;
   let error = '';
@@ -18,6 +19,7 @@
   let filterStyle = 'all';
   let expandedGroups = new Set<string>();
   let loadedGroups = new Set<string>();
+  let selectedPromptIds = new Set<string>();
   let loadingGroupId = '';
   let loadingMoreGroupId = '';
 
@@ -40,6 +42,18 @@
     });
   }
 
+  function isNew(value: string) {
+    const createdAt = new Date(value).getTime();
+    return Number.isFinite(createdAt) && Date.now() - createdAt <= NEW_WINDOW_MS;
+  }
+
+  function togglePrompt(id: string) {
+    const next = new Set(selectedPromptIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selectedPromptIds = next;
+  }
+
   async function load() {
     loading = true;
     error = '';
@@ -47,6 +61,7 @@
       groups = await api.listPromptLibrary(100);
       expandedGroups = new Set();
       loadedGroups = new Set();
+      selectedPromptIds = new Set();
     } catch (err) {
       error = err instanceof Error ? err.message : 'Prompt Library tidak dapat dimuat';
     } finally {
@@ -101,6 +116,8 @@
       groups = groups.map((group) => group.prompts.some((prompt) => prompt.id === item.id)
         ? { ...group, prompts: group.prompts.filter((prompt) => prompt.id !== item.id), promptCount: Math.max(0, group.promptCount - 1) }
         : group).filter((group) => group.promptCount > 0);
+      selectedPromptIds.delete(item.id);
+      selectedPromptIds = new Set(selectedPromptIds);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Prompt tidak dapat dihapus';
     }
@@ -114,8 +131,10 @@
       groups = groups.filter((item) => item.id !== group.id);
       expandedGroups.delete(group.id);
       loadedGroups.delete(group.id);
+      group.prompts.forEach((item) => selectedPromptIds.delete(item.id));
       expandedGroups = new Set(expandedGroups);
       loadedGroups = new Set(loadedGroups);
+      selectedPromptIds = new Set(selectedPromptIds);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Generation set tidak dapat dihapus';
     } finally {
@@ -123,28 +142,19 @@
     }
   }
 
-  async function exportSet(group: PromptGenerationSet, format: 'csv' | 'txt') {
+  async function exportSelected(format: 'csv' | 'txt') {
+    const promptIds = [...selectedPromptIds];
+    if (!promptIds.length) return;
     try {
-      await api.downloadPromptExport(format, group.id);
+      await api.downloadPromptExport(format, undefined, promptIds);
+      const selected = new Set(promptIds);
+      groups = groups.map((group) => ({
+        ...group,
+        prompts: group.prompts.map((item) => selected.has(item.id) ? { ...item, status: 'downloaded' } : item)
+      }));
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Export generation set gagal';
+      error = err instanceof Error ? err.message : 'Export prompt gagal';
     }
-  }
-
-  function downloadFiltered(format: 'csv' | 'txt') {
-    const prompts = filteredGroups.flatMap((group) => visiblePrompts(group));
-    if (!prompts.length) return;
-    const escapeCsv = (value: string) => `"${value.replaceAll('"', '""')}"`;
-    const content = format === 'csv'
-      ? [['created_at', 'seed', 'type', 'style', 'prompt', 'confidence'], ...filteredGroups.flatMap((group) => visiblePrompts(group).map((item) => [item.createdAt, item.seed, item.assetType, group.style, item.prompt, item.confidence]))].map((row) => row.map(escapeCsv).join(',')).join('\n')
-      : prompts.map((item) => item.prompt).join('\n');
-    const blob = new Blob([content], { type: format === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `stockscope-prompts-loaded.${format}`;
-    anchor.click();
-    URL.revokeObjectURL(url);
   }
 
   onMount(load);
@@ -153,8 +163,8 @@
 <Card>
   <div class="border-b border-border px-5 py-4">
     <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-      <div><p class="eyebrow">Prompt Library</p><h2 class="mt-1 text-base font-bold">Saved generation sets</h2><p class="mt-1 text-xs text-muted-foreground">Set dikelompokkan berdasarkan tanggal. Buka hanya set yang ingin dilihat.</p></div>
-      <div class="flex flex-wrap gap-2"><Button size="sm" variant="outline" on:click={() => downloadFiltered('csv')} disabled={!filteredGroups.some((group) => visiblePrompts(group).length)}>Loaded CSV</Button><Button size="sm" variant="outline" on:click={() => downloadFiltered('txt')} disabled={!filteredGroups.some((group) => visiblePrompts(group).length)}>Loaded TXT</Button><Button size="sm" variant="ghost" on:click={load} disabled={loading}><RefreshCw size={13} class={loading ? 'animate-spin' : ''} /> Refresh</Button></div>
+      <div><p class="eyebrow">Prompt Library</p><h2 class="mt-1 text-base font-bold">Saved generation sets</h2><p class="mt-1 text-xs text-muted-foreground">Set dikelompokkan berdasarkan tanggal. Buka set untuk memuat prompt secara bertahap.</p></div>
+      <div class="flex flex-wrap gap-2"><Button size="sm" variant="outline" on:click={() => exportSelected('csv')} disabled={!selectedPromptIds.size}><Download size={13} /> Export selected ({selectedPromptIds.size})</Button><Button size="sm" variant="outline" on:click={() => exportSelected('txt')} disabled={!selectedPromptIds.size}>TXT</Button><Button size="sm" variant="ghost" on:click={load} disabled={loading}><RefreshCw size={13} class={loading ? 'animate-spin' : ''} /> Refresh</Button></div>
     </div>
     <div class="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px_220px]"><input aria-label="Filter prompt set" bind:value={filterQuery} placeholder="Filter seed atau set" class="h-9 rounded-md border border-border bg-card px-3 text-xs text-card-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none" /><select aria-label="Filter output type" bind:value={filterType} class="h-9 rounded-md border border-border bg-card px-3 text-xs text-card-foreground focus:border-primary"><option value="all">All types</option><option value="images">Images</option><option value="videos">Videos</option></select><select aria-label="Filter style" bind:value={filterStyle} class="h-9 rounded-md border border-border bg-card px-3 text-xs text-card-foreground focus:border-primary"><option value="all">All styles</option>{#each styleOptions as option}<option value={option}>{option}</option>{/each}</select></div>
   </div>
@@ -166,11 +176,11 @@
           {#each sets as group}
             <div class="overflow-hidden rounded-md border border-border">
               <div class="flex flex-col justify-between gap-3 bg-muted/40 px-4 py-3 sm:flex-row sm:items-center">
-                <button type="button" class="min-w-0 text-left" aria-expanded={expandedGroups.has(group.id)} on:click={() => toggleGroup(group)}><div class="flex items-center gap-2"><ChevronDown size={15} class={`shrink-0 transition-transform ${expandedGroups.has(group.id) ? 'rotate-180 text-primary' : 'text-muted-foreground'}`} /><h4 class="truncate text-sm font-bold">{group.title}</h4></div><p class="mt-1 pl-6 text-[11px] text-muted-foreground">{group.seed} · {group.assetType} · {group.locale} · {group.prompts.length}/{group.promptCount} prompts loaded</p></button>
-                <div class="flex flex-wrap items-center gap-1"><Button size="sm" variant="ghost" on:click={() => toggleGroup(group)} disabled={loadingGroupId === group.id}>{#if loadingGroupId === group.id}<LoaderCircle size={13} class="animate-spin" /> Loading{:else}{expandedGroups.has(group.id) ? 'Hide' : 'Show'} prompts{/if}</Button><Button size="sm" variant="ghost" on:click={() => exportSet(group, 'csv')}><Download size={13} /> CSV</Button><Button size="sm" variant="ghost" on:click={() => exportSet(group, 'txt')}>TXT</Button><Button size="icon" variant="ghost" ariaLabel={`Delete generation set ${group.title}`} on:click={() => deleteSet(group)} disabled={deletingId === group.id}>{#if deletingId === group.id}<LoaderCircle size={14} class="animate-spin" />{:else}<Trash2 size={14} />{/if}</Button></div>
+                <button type="button" class="min-w-0 text-left" aria-expanded={expandedGroups.has(group.id)} on:click={() => toggleGroup(group)}><div class="flex flex-wrap items-center gap-2"><ChevronDown size={15} class={`shrink-0 transition-transform ${expandedGroups.has(group.id) ? 'rotate-180 text-primary' : 'text-muted-foreground'}`} /><h4 class="truncate text-sm font-bold">{group.title}</h4><Badge tone={isNew(group.createdAt) ? 'success' : 'muted'}>{isNew(group.createdAt) ? 'New' : 'Older'}</Badge></div><p class="mt-1 pl-6 text-[11px] text-muted-foreground">{group.seed} · {group.assetType} · {group.locale} · {group.prompts.length}/{group.promptCount} prompts loaded</p></button>
+                <div class="flex flex-wrap items-center gap-1"><Button size="sm" variant="ghost" on:click={() => toggleGroup(group)} disabled={loadingGroupId === group.id}>{#if loadingGroupId === group.id}<LoaderCircle size={13} class="animate-spin" /> Loading{:else}{expandedGroups.has(group.id) ? 'Hide' : 'Show'} prompts{/if}</Button><Button size="icon" variant="ghost" ariaLabel={`Delete generation set ${group.title}`} on:click={() => deleteSet(group)} disabled={deletingId === group.id}>{#if deletingId === group.id}<LoaderCircle size={14} class="animate-spin" />{:else}<Trash2 size={14} />{/if}</Button></div>
               </div>
               {#if expandedGroups.has(group.id)}
-                {#if loadingGroupId === group.id && !loadedGroups.has(group.id)}<div class="p-6 text-center text-xs text-muted-foreground">Loading prompts on demand...</div>{:else if !visiblePrompts(group).length}<div class="p-6 text-center text-xs text-muted-foreground">Tidak ada prompt yang cocok.</div>{:else}<div class="overflow-x-auto"><table class="w-full min-w-[680px] text-left text-xs"><thead class="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground"><tr><th class="px-4 py-2">Prompt</th><th class="px-4 py-2">Type</th><th class="px-4 py-2">Confidence</th><th class="px-4 py-2">Created</th><th class="px-4 py-2">Action</th></tr></thead><tbody class="divide-y divide-border/60">{#each visiblePrompts(group) as item}<tr class="align-top hover:bg-muted/30"><td class="max-w-[500px] px-4 py-3 leading-5 text-muted-foreground"><details><summary class="cursor-pointer list-none line-clamp-2">{item.prompt}</summary><p class="mt-2 whitespace-pre-wrap border-t border-border/60 pt-2 text-card-foreground">{item.prompt}</p></details></td><td class="whitespace-nowrap px-4 py-3">{item.assetType}</td><td class="px-4 py-3"><Badge tone={item.confidence === 'high' ? 'success' : item.confidence === 'low' ? 'warning' : 'muted'}>{item.confidence}</Badge></td><td class="whitespace-nowrap px-4 py-3 text-muted-foreground">{new Date(item.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</td><td class="px-4 py-3"><div class="flex gap-1"><Button size="icon" variant="ghost" ariaLabel="Copy prompt" on:click={() => copy(item)}>{#if copiedId === item.id}<span class="text-[10px] text-success">OK</span>{:else}<Copy size={13} />{/if}</Button><Button size="icon" variant="ghost" ariaLabel="Delete prompt" on:click={() => deletePrompt(item)}><Trash2 size={13} /></Button></div></td></tr>{/each}</tbody></table></div>{/if}
+                {#if loadingGroupId === group.id && !loadedGroups.has(group.id)}<div class="p-6 text-center text-xs text-muted-foreground">Loading prompts on demand...</div>{:else if !visiblePrompts(group).length}<div class="p-6 text-center text-xs text-muted-foreground">Tidak ada prompt yang cocok.</div>{:else}<div class="overflow-x-auto"><table class="w-full min-w-[760px] text-left text-xs"><thead class="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground"><tr><th class="w-10 px-4 py-2"><span class="sr-only">Select</span></th><th class="px-4 py-2">Prompt</th><th class="px-4 py-2">Type</th><th class="px-4 py-2">Status</th><th class="px-4 py-2">Confidence</th><th class="px-4 py-2">Created</th><th class="px-4 py-2">Action</th></tr></thead><tbody class="divide-y divide-border/60">{#each visiblePrompts(group) as item}<tr class="align-top hover:bg-muted/30"><td class="px-4 py-3"><input type="checkbox" aria-label="Select prompt for export" checked={selectedPromptIds.has(item.id)} on:change={() => togglePrompt(item.id)} /></td><td class="max-w-[500px] px-4 py-3 leading-5 text-muted-foreground"><div class="mb-2 flex flex-wrap items-center gap-1"><Badge tone={isNew(item.createdAt) ? 'success' : 'muted'}>{isNew(item.createdAt) ? 'New' : 'Older'}</Badge>{#if item.status === 'downloaded'}<Badge tone="default">Downloaded</Badge>{/if}</div><details><summary class="cursor-pointer list-none line-clamp-2">{item.prompt}</summary><p class="mt-2 whitespace-pre-wrap border-t border-border/60 pt-2 text-card-foreground">{item.prompt}</p></details></td><td class="whitespace-nowrap px-4 py-3">{item.assetType}</td><td class="whitespace-nowrap px-4 py-3">{item.status === 'downloaded' ? 'Downloaded' : 'Saved'}</td><td class="px-4 py-3"><Badge tone={item.confidence === 'high' ? 'success' : item.confidence === 'low' ? 'warning' : 'muted'}>{item.confidence}</Badge></td><td class="whitespace-nowrap px-4 py-3 text-muted-foreground">{new Date(item.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</td><td class="px-4 py-3"><div class="flex gap-1"><Button size="icon" variant="ghost" ariaLabel="Copy prompt" on:click={() => copy(item)}>{#if copiedId === item.id}<span class="text-[10px] text-success">OK</span>{:else}<Copy size={13} />{/if}</Button><Button size="icon" variant="ghost" ariaLabel="Delete prompt" on:click={() => deletePrompt(item)}><Trash2 size={13} /></Button></div></td></tr>{/each}</tbody></table></div>{/if}
                 {#if group.prompts.length < group.promptCount}<div class="border-t border-border px-4 py-3 text-center"><Button size="sm" variant="outline" on:click={() => loadPrompts(group, group.prompts.length)} disabled={loadingMoreGroupId === group.id}>{#if loadingMoreGroupId === group.id}<LoaderCircle size={13} class="animate-spin" /> Loading{:else}Load more ({group.promptCount - group.prompts.length} remaining){/if}</Button></div>{/if}
               {/if}
             </div>

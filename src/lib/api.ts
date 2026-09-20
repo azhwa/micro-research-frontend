@@ -83,9 +83,12 @@ export const api = {
   listPromptLibrary: (limit = 100) => request<PromptGenerationSet[]>(`/api/prompt-library?limit=${limit}`),
   getPromptLibrarySet: (generationId: string, limit = 50, offset = 0) => request<PromptGenerationSet>(`/api/prompt-library/${encodeURIComponent(generationId)}?limit=${limit}&offset=${offset}`),
   deletePromptGenerationSet: (generationId: string) => request<{ deleted: boolean; generationId: string; promptCount: number }>(`/api/prompt-library/${generationId}`, { method: 'DELETE' }),
-  downloadPromptExport: async (format: 'csv' | 'txt', generationId?: string): Promise<void> => {
-    const params = generationId ? `?generationId=${encodeURIComponent(generationId)}` : '';
-    const response = await fetch(`${API_BASE}/api/prompts/export.${format}${params}`, { credentials: 'include' });
+  downloadPromptExport: async (format: 'csv' | 'txt', generationId?: string, promptIds: string[] = []): Promise<void> => {
+    const params = new URLSearchParams();
+    if (generationId) params.set('generationId', generationId);
+    promptIds.forEach((id) => params.append('promptId', id));
+    const query = params.toString();
+    const response = await fetch(`${API_BASE}/api/prompts/export.${format}${query ? `?${query}` : ''}`, { credentials: 'include' });
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
       throw new ApiError(payload?.message ?? payload?.error ?? `Export gagal (${response.status})`, response.status);
