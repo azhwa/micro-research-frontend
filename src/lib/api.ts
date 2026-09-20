@@ -81,6 +81,7 @@ export const api = {
   listSavedPrompts: (limit = 100) => request<SavedPrompt[]>(`/api/prompts?limit=${limit}`),
   deleteSavedPrompt: (id: string) => request<{ deleted: boolean; promptId: string }>(`/api/prompts/${id}`, { method: 'DELETE' }),
   listPromptLibrary: (limit = 100) => request<PromptGenerationSet[]>(`/api/prompt-library?limit=${limit}`),
+  getPromptLibrarySet: (generationId: string, limit = 50, offset = 0) => request<PromptGenerationSet>(`/api/prompt-library/${encodeURIComponent(generationId)}?limit=${limit}&offset=${offset}`),
   deletePromptGenerationSet: (generationId: string) => request<{ deleted: boolean; generationId: string; promptCount: number }>(`/api/prompt-library/${generationId}`, { method: 'DELETE' }),
   downloadPromptExport: async (format: 'csv' | 'txt', generationId?: string): Promise<void> => {
     const params = generationId ? `?generationId=${encodeURIComponent(generationId)}` : '';
