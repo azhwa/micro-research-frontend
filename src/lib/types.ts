@@ -309,6 +309,13 @@ export interface AiRecommendation {
   promptVersion: string;
   model: string | null;
   inputHash: string;
+  contextHash?: string | null;
+  generationGroupId?: string | null;
+  generationIndex?: number;
+  generationSeed?: string | null;
+  generationTitle?: string | null;
+  outputType?: string | null;
+  recommendedStyle?: string | null;
   status: string;
   response: unknown;
   errorMessage: string | null;
@@ -346,14 +353,23 @@ export interface PromptQueueItem {
 }
 
 export interface AssetReadoutItem {
-  assetConcept?: string;
-  format?: string;
-  titleIdeas?: string[];
-  keywordCluster?: string[];
-  rationale?: string;
-  demandSignal?: string;
-  competitionSignal?: string;
-  confidence?: string;
+  assetConcept: string;
+  sourceAssetIds: string[];
+  sourceAssetUrls: string[];
+  keywordSuggestions: Array<{ keyword: string; score: number | null; level: number; label: string; confidence: 'low' | 'medium' | 'high' | string }>;
+  recommendedStyle: string;
+  styleRationale: string;
+  format: 'image' | 'video' | string;
+  promptDirection: string;
+  evidence: string[];
+  confidence: 'low' | 'medium' | 'high' | string;
+}
+
+export interface AssetReadoutResponse {
+  summary: string;
+  overallAssessment: string;
+  recommendations: AssetReadoutItem[];
+  cautions: string[];
 }
 
 export interface KeywordReadoutItem {
@@ -465,6 +481,19 @@ export interface SavedPrompt {
   updatedAt: string;
 }
 
+export interface PromptGenerationSet {
+  id: string;
+  title: string;
+  seed: string;
+  category: string;
+  assetType: string;
+  locale: string;
+  style: string;
+  createdAt: string;
+  promptCount: number;
+  prompts: SavedPrompt[];
+}
+
 export interface PromptGenerationResponse {
   summary: string;
   prompts: GeneratedImagePrompt[];
@@ -477,6 +506,12 @@ export interface PromptGeneration {
   promptVersion: string;
   model: string | null;
   inputHash: string;
+  generationGroupId?: string | null;
+  generationIndex?: number;
+  generationSeed?: string | null;
+  generationTitle?: string | null;
+  outputType?: string | null;
+  recommendedStyle?: string | null;
   status: string;
   response: PromptGenerationResponse | null;
   errorMessage: string | null;

@@ -14,12 +14,20 @@
   const navigation = [
     { href: '/insights', label: 'Global insight', icon: BarChart3 },
     { href: '/discover', label: 'Discover ideas', icon: Compass },
-    { href: '/prompts', label: 'Prompt Studio', icon: Sparkles },
+    { href: '/prompts', label: 'Prompt Studio', icon: Sparkles, children: [
+      { href: '/prompts', label: 'Generator' },
+      { href: '/prompts/queue', label: 'Prompt Queue' },
+      { href: '/prompts/library', label: 'Prompt Library' }
+    ] },
     { href: '/research-queue', label: 'Research queue', icon: List },
     { href: '/compare', label: 'Compare runs', icon: GitCompare },
     { href: '/monitoring', label: 'Monitoring', icon: Activity },
     { href: '/settings', label: 'Settings', icon: Settings }
   ];
+
+  function isActive(href: string): boolean {
+    return page.url.pathname === href || (href !== '/' && page.url.pathname.startsWith(href));
+  }
 
   async function handleLogout(): Promise<void> {
     await api.logout();
@@ -76,12 +84,19 @@
     </div>
   </header>
   <nav class="flex gap-1 overflow-x-auto border-b border-[#dedbd3] bg-[#fffdfa] px-4 py-2 lg:hidden">
-    {#each navigation.slice(0, 4) as item}<a href={item.href} class={cn('whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold', page.url.pathname === item.href || (item.href !== '/' && page.url.pathname.startsWith(item.href)) ? 'bg-active/10 text-active' : 'text-[#77736b] hover:bg-[#f1eee8]')}><svelte:component this={item.icon} size={13} class="mr-1 inline" />{item.label}</a>{/each}
+    {#each navigation.slice(0, 4) as item}<a href={item.href} class={cn('whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold', isActive(item.href) ? 'bg-active/10 text-active' : 'text-[#77736b] hover:bg-[#f1eee8]')}><svelte:component this={item.icon} size={13} class="mr-1 inline" />{item.label}</a>{/each}
   </nav>
+  {#if page.url.pathname.startsWith('/prompts')}
+    <nav aria-label="Prompt Studio sections" class="flex gap-1 overflow-x-auto border-b border-[#dedbd3] bg-[#fffdfa] px-4 py-1.5 lg:hidden">
+      <a href="/prompts" class={cn('whitespace-nowrap rounded-md px-3 py-1.5 text-[11px] font-semibold', page.url.pathname === '/prompts' ? 'bg-active/10 text-active' : 'text-[#77736b] hover:bg-[#f1eee8]')}>Generator</a>
+      <a href="/prompts/queue" class={cn('whitespace-nowrap rounded-md px-3 py-1.5 text-[11px] font-semibold', page.url.pathname === '/prompts/queue' ? 'bg-active/10 text-active' : 'text-[#77736b] hover:bg-[#f1eee8]')}>Prompt Queue</a>
+      <a href="/prompts/library" class={cn('whitespace-nowrap rounded-md px-3 py-1.5 text-[11px] font-semibold', page.url.pathname === '/prompts/library' ? 'bg-active/10 text-active' : 'text-[#77736b] hover:bg-[#f1eee8]')}>Prompt Library</a>
+    </nav>
+  {/if}
   <div class="mx-auto flex max-w-[1480px]">
     <aside class="hidden w-60 shrink-0 border-r border-[#dedbd3] px-3 py-6 lg:block">
       <p class="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a958b]">Workspace</p>
-      <nav class="space-y-1">{#each navigation as item}<a href={item.href} class={cn('flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium', page.url.pathname === item.href || (item.href !== '/' && page.url.pathname.startsWith(item.href)) ? 'bg-active/10 text-active' : 'text-[#6d6a63] hover:bg-[#efede7] hover:text-[#242322]')}><svelte:component this={item.icon} size={16} /> {item.label}</a>{/each}</nav>
+      <nav class="space-y-1">{#each navigation as item}<a href={item.href} class={cn('flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium', isActive(item.href) ? 'bg-active/10 text-active' : 'text-[#6d6a63] hover:bg-[#efede7] hover:text-[#242322]')}><svelte:component this={item.icon} size={16} /> {item.label}</a>{#if item.children && isActive(item.href)}<div class="ml-7 space-y-0.5 border-l border-border pl-3">{#each item.children as child}<a href={child.href} class={cn('block rounded-md px-2.5 py-1.5 text-xs font-medium', page.url.pathname === child.href ? 'bg-active/10 text-active' : 'text-muted-foreground hover:bg-muted hover:text-foreground')}>{child.label}</a>{/each}</div>{/if}{/each}</nav>
       <p class="mb-2 mt-10 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a958b]">Sources</p>
       <div class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#6d6a63]"><Search size={16} /> Adobe Stock <span class="ml-auto h-2 w-2 rounded-full bg-[#5a9b6c]"></span></div><div class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#a19c92]"><Database size={16} /> More sources <span class="ml-auto text-[10px]">soon</span></div>
       <div class="mt-10 rounded-lg border border-[#eadfd8] bg-[#fff6f2] p-3"><p class="text-[11px] font-bold uppercase tracking-wider text-[#a74630]">Working note</p><p class="mt-2 text-xs leading-5 text-[#7e665f]">Gunakan Discover untuk menemukan seed, lalu validasi dengan research Page One.</p></div>

@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import type { AiRecommendation, AiReadoutType, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, PromptGeneration, PromptQueueItem, ProxyEndpoint, ResearchComparison, ResearchDetailLog, ResearchEvent, ResearchKeyword, ResearchQueueItem, ResearchResult, ResearchRun, ResearchSummary, RunCreated, SavedPrompt, SeedDiscoveryJob } from './types';
+import type { AiRecommendation, AiReadoutType, AuthMe, GeminiApiKey, GlobalInsights, MonitoringSnapshot, PromptGeneration, PromptGenerationSet, PromptQueueItem, ProxyEndpoint, ResearchComparison, ResearchDetailLog, ResearchEvent, ResearchKeyword, ResearchQueueItem, ResearchResult, ResearchRun, ResearchSummary, RunCreated, SavedPrompt, SeedDiscoveryJob } from './types';
 
 const API_BASE = (env.PUBLIC_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
@@ -71,7 +71,7 @@ export const api = {
   listSeedDiscoveryJobs: (limit = 20) => request<SeedDiscoveryJob[]>(`/api/seed-discovery?limit=${limit}`),
   getSeedDiscoveryJob: (id: string) => request<SeedDiscoveryJob>(`/api/seed-discovery/${id}`),
   cancelSeedDiscoveryJob: (id: string) => request<SeedDiscoveryJob>(`/api/seed-discovery/${id}/cancel`, { method: 'POST', body: JSON.stringify({}) }),
-  generatePrompts: (body: { seed: string; researchRunId?: string; category?: string; assetType?: string; locale?: string; count?: number; style?: string; model?: string }) => request<{ generation: PromptGeneration; context: Record<string, unknown> }>('/api/prompt-generations', { method: 'POST', body: JSON.stringify(body) }),
+  generatePrompts: (body: { seed: string; researchRunId?: string; category?: string; assetType?: string; locale?: string; count?: number; style?: string; model?: string; generationSeed?: string; generateAnother?: boolean }) => request<{ generation: PromptGeneration; context: Record<string, unknown> }>('/api/prompt-generations', { method: 'POST', body: JSON.stringify(body) }),
   listPromptQueue: (limit = 100) => request<PromptQueueItem[]>(`/api/prompt-queue?limit=${limit}`),
   queuePrompts: (items: Array<{ keyword: string; category?: string; researchAssetType?: 'images' | 'videos'; promptOutputType?: 'image' | 'video'; locale?: string; promptCount?: number; recommendedStyle?: string; styleRationale?: string; sourceReadoutId?: string; sourceScore?: number; sourceLevel?: number; sourceConfidence?: 'low' | 'medium' | 'high'; sourceEvidence?: string[]; sourceObservedAt?: string | null }>) => request<{ created: PromptQueueItem[]; duplicate: string[]; rejected: Array<{ keyword: string; reason: string }>; skipped: number }>('/api/prompt-queue/batch', { method: 'POST', body: JSON.stringify({ items }) }),
   updatePromptQueue: (id: string, body: { promptCount?: number; promptOutputType?: 'image' | 'video'; recommendedStyle?: string }) => request<PromptQueueItem>(`/api/prompt-queue/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -80,8 +80,11 @@ export const api = {
   cancelPromptQueue: (id: string) => request<PromptQueueItem>(`/api/prompt-queue/${id}/cancel`, { method: 'POST', body: JSON.stringify({}) }),
   listSavedPrompts: (limit = 100) => request<SavedPrompt[]>(`/api/prompts?limit=${limit}`),
   deleteSavedPrompt: (id: string) => request<{ deleted: boolean; promptId: string }>(`/api/prompts/${id}`, { method: 'DELETE' }),
-  downloadPromptExport: async (format: 'csv' | 'txt'): Promise<void> => {
-    const response = await fetch(`${API_BASE}/api/prompts/export.${format}`, { credentials: 'include' });
+  listPromptLibrary: (limit = 100) => request<PromptGenerationSet[]>(`/api/prompt-library?limit=${limit}`),
+  deletePromptGenerationSet: (generationId: string) => request<{ deleted: boolean; generationId: string; promptCount: number }>(`/api/prompt-library/${generationId}`, { method: 'DELETE' }),
+  downloadPromptExport: async (format: 'csv' | 'txt', generationId?: string): Promise<void> => {
+    const params = generationId ? `?generationId=${encodeURIComponent(generationId)}` : '';
+    const response = await fetch(`${API_BASE}/api/prompts/export.${format}${params}`, { credentials: 'include' });
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
       throw new ApiError(payload?.message ?? payload?.error ?? `Export gagal (${response.status})`, response.status);
@@ -112,7 +115,7 @@ export const api = {
   generateAiRecommendation: (id: string, model = 'gemini-3.5-flash-lite') => request<{ recommendation: AiRecommendation; context: Record<string, unknown> }>(`/api/research-runs/${id}/ai-recommendations/generate`, { method: 'POST', body: JSON.stringify({ model }) }),
   generateGlobalAiRecommendation: (options: { model?: string; assetType?: string; locale?: string; category?: string } = {}) => request<{ recommendation: AiRecommendation; context: Record<string, unknown> }>('/api/ai-recommendations/global/generate', { method: 'POST', body: JSON.stringify(options) }),
   getGlobalAiRecommendations: (limit = 20) => request<AiRecommendation[]>(`/api/ai-recommendations/global?limit=${limit}`),
-  generateAiReadout: (type: AiReadoutType, options: { model?: string; assetType?: string; locale?: string; category?: string } = {}) => request<{ recommendation: AiRecommendation; context: Record<string, unknown> }>('/api/ai-readouts/global/generate', { method: 'POST', body: JSON.stringify({ ...options, type }) }),
+  generateAiReadout: (type: AiReadoutType, options: { model?: string; assetType?: string; locale?: string; category?: string; generationSeed?: string; generateAnother?: boolean } = {}) => request<{ recommendation: AiRecommendation; context: Record<string, unknown> }>('/api/ai-readouts/global/generate', { method: 'POST', body: JSON.stringify({ ...options, type }) }),
   getAiReadouts: (type: AiReadoutType, options: { limit?: number; assetType?: string; locale?: string; category?: string } = {}) => {
     const params = new URLSearchParams({ type, limit: String(options.limit ?? 20) });
     if (options.assetType) params.set('assetType', options.assetType);
