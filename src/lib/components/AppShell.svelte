@@ -70,7 +70,7 @@
   <header class="sticky top-0 z-20 border-b border-[#dedbd3]/90 bg-[#f7f5f0]/95 backdrop-blur">
     <div class="mx-auto flex h-16 max-w-[1480px] items-center justify-between px-4 lg:px-8">
       <a href="/" class="flex items-center gap-2.5">
-        <span class="flex h-8 w-8 items-center justify-center rounded-md bg-[#d75a3b] text-black"><Database size={16} strokeWidth={2.5} /></span>
+        <span class="flex h-8 w-8 items-center justify-center rounded-md bg-[#d75a3b] text-[#000000]"><Database size={16} strokeWidth={2.5} /></span>
         <span class="text-[15px] font-bold tracking-tight">Stock<span class="text-[#d75a3b]">Scope</span></span>
         <span class="hidden rounded border border-[#d6d1c7] px-1.5 py-0.5 text-[10px] font-semibold text-[#8d897f] sm:inline">PRIVATE LAB</span>
       </a>
