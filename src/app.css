@@ -88,13 +88,12 @@ button, input, select { font: inherit; }
 @layer base {
   * { border-color: var(--theme-base-300); }
   ::selection { background: color-mix(in oklch, var(--theme-primary) 28%, transparent); color: var(--theme-base-content); }
+  :where(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--theme-active); outline-offset: 2px; }
 }
 
 @layer utilities {
   .font-mono { font-variant-numeric: tabular-nums; }
   .eyebrow { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: color-mix(in oklch, var(--theme-primary) 70%, var(--theme-base-content)); }
-  .surface-dotted { background-image: radial-gradient(color-mix(in oklch, var(--theme-base-content) 20%, transparent) 0.7px, transparent 0.7px); background-size: 13px 13px; }
-
   /* Legacy utility classes stay mapped to the active theme while detail screens are refactored. */
   .bg-slate-950 { background-color: var(--theme-base-100) !important; }
   .bg-slate-900 { background-color: var(--theme-base-200) !important; }

@@ -1,30 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { ArrowUpRight, Clock3, FileSearch, Image, Plus, RefreshCw, Search, Sparkles, Trash2, Video } from '@lucide/svelte';
-  import Badge from '$lib/components/ui/Badge.svelte';
-  import Button from '$lib/components/ui/Button.svelte';
-  import Card from '$lib/components/ui/Card.svelte';
-  import { api } from '$lib/api';
-  import type { ResearchRun } from '$lib/types';
-  import { formatDate } from '$lib/utils';
+  import { goto } from '$app/navigation';
 
-  let runs: ResearchRun[] = [];
-  let loading = true;
-  let error = '';
-  const statusTone = (status: ResearchRun['status']) => status === 'completed' ? 'success' : status === 'failed' ? 'danger' : status === 'running' ? 'default' : status === 'cancelled' ? 'muted' : 'warning';
-  const statusLabel = (status: ResearchRun['status']) => ({ pending: 'Pending', running: 'Running', completed: 'Completed', partial: 'Partial', failed: 'Failed', cancelled: 'Cancelled' })[status];
-  const researchLabel = (run: ResearchRun) => run.seedKeyword || (run.mode === 'primary' ? 'Adobe Stock Page One' : 'Untitled research');
-  async function loadRuns() { loading = true; error = ''; try { runs = await api.listRuns(20); } catch (err) { error = err instanceof Error ? err.message : 'Tidak dapat memuat data'; } finally { loading = false; } }
-  async function deleteRun(event: MouseEvent, run: ResearchRun) { event.preventDefault(); event.stopPropagation(); if (!confirm(`Hapus research "${researchLabel(run)}"?`)) return; try { await api.deleteResearchRun(run.id); runs = runs.filter((item) => item.id !== run.id); } catch (err) { error = err instanceof Error ? err.message : 'Research tidak dapat dihapus'; } }
-  onMount(loadRuns);
+  onMount(() => { void goto('/insights', { replaceState: true }); });
 </script>
 
-<svelte:head><title>Overview | StockScope</title></svelte:head>
-
-<div class="mx-auto max-w-6xl space-y-7">
-  <section class="relative overflow-hidden rounded-2xl border border-[#dedbd3] bg-[#fffdfa] p-6 sm:p-8"><div class="relative z-10 max-w-2xl"><p class="eyebrow">Microstock intelligence</p><h1 class="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Turn observations into your next stock idea.</h1><p class="mt-3 text-sm leading-6 text-[#6d6a63]">Mulai dari peluang keyword, validasi lewat Adobe Stock, lalu gunakan sinyal lintas research untuk memilih konsep yang layak dibuat.</p><div class="mt-6 flex flex-wrap gap-3"><a href="/discover"><Button><Sparkles size={15} /> Find seed ideas</Button></a><a href="/research/new"><Button variant="outline"><Plus size={15} /> New research</Button></a></div></div><div class="absolute -right-12 -top-16 hidden h-64 w-64 rounded-full border-[24px] border-[#fff0eb] sm:block"></div><div class="absolute -bottom-20 right-28 hidden h-44 w-44 rounded-full border-[16px] border-[#f3e6d8] sm:block"></div></section>
-
-  <div class="grid gap-3 sm:grid-cols-3"><Card className="p-5"><div class="flex items-center justify-between"><p class="text-xs font-semibold uppercase tracking-wider text-[#8d897f]">Researches</p><FileSearch size={17} class="text-[#d75a3b]" /></div><p class="mt-3 text-3xl font-bold">{runs.length}</p><p class="mt-1 text-xs text-[#9a958b]">Riwayat tersimpan</p></Card><Card className="p-5"><div class="flex items-center justify-between"><p class="text-xs font-semibold uppercase tracking-wider text-[#8d897f]">Completed</p><Sparkles size={17} class="text-[#5a9b6c]" /></div><p class="mt-3 text-3xl font-bold text-[#39704a]">{runs.filter((run) => run.status === 'completed').length}</p><p class="mt-1 text-xs text-[#9a958b]">Siap dianalisis</p></Card><Card className="p-5"><div class="flex items-center justify-between"><p class="text-xs font-semibold uppercase tracking-wider text-[#8d897f]">Active jobs</p><Clock3 size={17} class="text-[#d29b45]" /></div><p class="mt-3 text-3xl font-bold text-[#956a1b]">{runs.filter((run) => ['pending', 'running'].includes(run.status)).length}</p><p class="mt-1 text-xs text-[#9a958b]">Worker queue</p></Card></div>
-
-  <Card><div class="flex items-center justify-between px-5 py-4"><div><p class="eyebrow">Workspace history</p><h2 class="mt-1 text-base font-bold">Recent research</h2></div><Button variant="ghost" size="icon" ariaLabel="Refresh" on:click={loadRuns}><RefreshCw size={15} class={loading ? 'animate-spin' : ''} /></Button></div>{#if error}<div class="m-5 rounded-md border border-[#b94035]/25 bg-[#fff0ee] p-3 text-sm text-[#a3372f]">{error}</div>{:else if loading}<div class="space-y-3 p-5"><div class="h-12 animate-pulse rounded bg-[#efede7]"></div><div class="h-12 animate-pulse rounded bg-[#efede7]"></div></div>{:else if runs.length === 0}<div class="flex flex-col items-center justify-center px-5 py-16 text-center"><div class="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#fff0eb] text-[#d75a3b]"><Search size={18} /></div><p class="text-sm font-bold">Belum ada research</p><p class="mt-1 max-w-sm text-xs leading-5 text-[#77736b]">Mulai dari Discover untuk menemukan seed atau langsung jalankan Page One snapshot.</p><a class="mt-5" href="/discover"><Button size="sm">Open Discover</Button></a></div>{:else}<div class="border-t border-[#eeeae2]/25 divide-y divide-[#eeeae2]/25">{#each runs as run}<div class="flex items-center gap-2 pr-3 transition-colors hover:bg-[#efede7]"><a href={`/research/${run.id}`} class="flex min-w-0 flex-1 items-center gap-4 px-5 py-4"><div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#f1eee8] text-[#77736b]">{#if run.assetType === 'videos'}<Video size={15} />{:else}<Image size={15} />{/if}</div><div class="min-w-0 flex-1"><div class="flex flex-wrap items-center gap-2"><p class="truncate text-sm font-bold text-[#3f3c37]">{researchLabel(run)}</p><Badge tone={statusTone(run.status)}>{statusLabel(run.status)}</Badge></div><p class="mt-1 text-xs text-[#9a958b]">{run.mode === 'primary' ? 'Page One' : run.assetType} · {run.locale} · {formatDate(run.createdAt)}</p></div><div class="hidden text-right sm:block"><p class="text-xs text-[#6d6a63]">{run.progressCompleted}/{run.progressTotal || '--'} queries</p><p class="mt-1 text-[11px] text-[#9a958b]">{run.maxSuggestions} suggestions</p></div><ArrowUpRight size={15} class="shrink-0 text-[#b2ada3]" /></a>{#if !['pending', 'running'].includes(run.status)}<Button variant="ghost" size="icon" ariaLabel={`Delete ${researchLabel(run)}`} on:click={(event) => deleteRun(event, run)}><Trash2 size={15} class="text-[#9a958b] hover:text-[#b94035]" /></Button>{/if}</div>{/each}</div>{/if}</Card>
-</div>
+<svelte:head><title>Global insight | StockScope</title></svelte:head>
+<div class="flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground">Membuka Global insight...</div>

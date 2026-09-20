@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Activity, BarChart3, Compass, Database, FlaskConical, GitCompare, Layers3, List, LogOut, Moon, Search, Settings, Sparkles, Sun } from '@lucide/svelte';
+  import { Activity, BarChart3, Compass, Database, GitCompare, List, LogOut, Moon, Search, Settings, Sparkles, Sun } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -12,14 +12,12 @@
   let theme: 'light' | 'dark' = 'light';
 
   const navigation = [
-    { href: '/', label: 'Overview', icon: BarChart3 },
+    { href: '/insights', label: 'Global insight', icon: BarChart3 },
     { href: '/discover', label: 'Discover ideas', icon: Compass },
     { href: '/prompts', label: 'Prompt Studio', icon: Sparkles },
     { href: '/research-queue', label: 'Research queue', icon: List },
-    { href: '/insights', label: 'Global insights', icon: BarChart3 },
     { href: '/compare', label: 'Compare runs', icon: GitCompare },
     { href: '/monitoring', label: 'Monitoring', icon: Activity },
-    { href: '/research/new', label: 'New research', icon: FlaskConical },
     { href: '/settings', label: 'Settings', icon: Settings }
   ];
 
@@ -69,7 +67,7 @@
 <div class="min-h-screen bg-background text-foreground">
   <header class="sticky top-0 z-20 border-b border-[#dedbd3]/90 bg-[#f7f5f0]/95 backdrop-blur">
     <div class="mx-auto flex h-16 max-w-[1480px] items-center justify-between px-4 lg:px-8">
-      <a href="/" class="flex items-center gap-2.5">
+      <a href="/insights" class="flex items-center gap-2.5">
         <span class="flex h-8 w-8 items-center justify-center rounded-md bg-[#d75a3b] text-[#000000]"><Database size={16} strokeWidth={2.5} /></span>
         <span class="text-[15px] font-bold tracking-tight">Stock<span class="text-[#d75a3b]">Scope</span></span>
         <span class="hidden rounded border border-[#d6d1c7] px-1.5 py-0.5 text-[10px] font-semibold text-[#8d897f] sm:inline">PRIVATE LAB</span>

@@ -304,6 +304,8 @@ export interface AiRecommendation {
   id: string;
   researchRunId: string | null;
   scope: string;
+  readoutType?: 'legacy' | 'asset' | 'keyword';
+  readoutFilters?: { assetType?: string; locale?: string; category?: string };
   promptVersion: string;
   model: string | null;
   inputHash: string;
@@ -313,6 +315,62 @@ export interface AiRecommendation {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
+}
+
+export type AiReadoutType = 'asset' | 'keyword';
+export type PromptQueueStatus = 'queued' | 'generating' | 'completed' | 'failed' | 'cancelled';
+
+export interface PromptQueueItem {
+  id: string;
+  keyword: string;
+  category: string;
+  researchAssetType: AssetType;
+  promptOutputType: 'image' | 'video';
+  locale: string;
+  promptCount: number;
+  recommendedStyle: string;
+  styleRationale: string;
+  sourceScore: number | null;
+  sourceLevel: number | null;
+  sourceConfidence: 'low' | 'medium' | 'high' | null;
+  sourceEvidence: string[];
+  sourceObservedAt: string | null;
+  status: PromptQueueStatus;
+  sourceReadoutId: string | null;
+  generationId: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  updatedAt: string;
+}
+
+export interface AssetReadoutItem {
+  assetConcept?: string;
+  format?: string;
+  titleIdeas?: string[];
+  keywordCluster?: string[];
+  rationale?: string;
+  demandSignal?: string;
+  competitionSignal?: string;
+  confidence?: string;
+}
+
+export interface KeywordReadoutItem {
+  keyword: string;
+  recommendedStyle: string;
+  styleRationale: string;
+  whyItMatters: string;
+  opportunityScore: number;
+  level?: number;
+  label?: string;
+  researchCount?: number;
+  assetCount?: number;
+  averageDownloadRank?: number | null;
+  averageResultCount?: number | null;
+  lastObservedAt?: string | null;
+  evidenceKeywords?: string[];
+  confidence: 'low' | 'medium' | 'high' | string;
 }
 
 export interface GeminiApiKey {
