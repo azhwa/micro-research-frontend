@@ -67,7 +67,7 @@ export const api = {
     if (options.category) params.set('category', options.category);
     return `${API_BASE}/api/insights/export.csv?${params.toString()}`;
   },
-  createSeedDiscovery: (body: { topic?: string; category?: string; assetType?: string; locale?: string; count?: number; model?: string }) => request<SeedDiscoveryJob>('/api/seed-discovery', { method: 'POST', body: JSON.stringify(body) }),
+  createSeedDiscovery: (body: { topic?: string; category?: string; assetType?: string; locale?: string; count?: number; model?: string; forceNew?: boolean }) => request<SeedDiscoveryJob>('/api/seed-discovery', { method: 'POST', body: JSON.stringify(body) }),
   listSeedDiscoveryJobs: (limit = 20) => request<SeedDiscoveryJob[]>(`/api/seed-discovery?limit=${limit}`),
   getSeedDiscoveryJob: (id: string) => request<SeedDiscoveryJob>(`/api/seed-discovery/${id}`),
   cancelSeedDiscoveryJob: (id: string) => request<SeedDiscoveryJob>(`/api/seed-discovery/${id}/cancel`, { method: 'POST', body: JSON.stringify({}) }),
